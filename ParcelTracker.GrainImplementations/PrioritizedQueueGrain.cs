@@ -20,32 +20,35 @@ public class PrioritizedQueueGrain<T> : Grain, IPrioritizedQueue<T>
         this.state = state;
     }
 
-    public async Task AddJob(int priority, T job)
+    public async Task AddJob(Job<T> job)
     {
-        logger.LogInformation("Add {Priority}: {Job}", priority, job);
+        logger.LogInformation("Added job {Job}", job);
 
-        if (!this.state.State.ContainsKey(priority))
+        if (!state.State.ContainsKey(job.Priority))
         {
-            this.state.State[priority] = new();
+            state.State[job.Priority] = new();
         }
 
-        this.state.State[priority].Enqueue(job);
+        state.State[job.Priority].Enqueue(job.JobDescription);
 
-        await this.state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
-    public async Task<(int, T)?> GetJob()
+    public async Task<Job<T>?> GetJob()
     {
-        foreach (var prio in this.state.State.Keys.Order())
+        foreach (var prio in state.State.Keys.Order())
         {
-            var queue = this.state.State[prio];
+            var queue = state.State[prio];
             if (queue.Count > 0)
             {
-                var x = (prio, queue.Dequeue());
+                // Remove item from state, save updated state and return result.
+                Job<T> job = new(prio, queue.Dequeue());
 
-                await this.state.WriteStateAsync();
+                await state.WriteStateAsync();
 
-                return x;
+                logger.LogInformation("Returning job {Job}", job);
+
+                return job;
             }
         }
 
