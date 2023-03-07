@@ -4,43 +4,51 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using GrainInterfaces;
+using Orleans.Runtime;
 
 public class PrioritizedQueueGrain<T> : Grain, IPrioritizedQueue<T>
 {
     private readonly ILogger<PrioritizedQueueGrain<T>> logger;
-    private readonly Dictionary<int, Queue<T>> jobs = new();
+    private readonly IPersistentState<Dictionary<int, Queue<T>>> state;
 
-    public PrioritizedQueueGrain(ILogger<PrioritizedQueueGrain<T>> logger)
+    public PrioritizedQueueGrain(
+        ILogger<PrioritizedQueueGrain<T>> logger,
+        [PersistentState(stateName: "prioritizedQueue", storageName: "blobGrainStorage")]
+        IPersistentState<Dictionary<int, Queue<T>>> state)
     {
         this.logger = logger;
+        this.state = state;
     }
 
-    public Task AddJob(int priority, T job)
+    public async Task AddJob(int priority, T job)
     {
         logger.LogInformation("Add {Priority}: {Job}", priority, job);
 
-        if (!jobs.ContainsKey(priority))
+        if (!this.state.State.ContainsKey(priority))
         {
-            jobs[priority] = new();
+            this.state.State[priority] = new();
         }
 
-        jobs[priority].Enqueue(job);
+        this.state.State[priority].Enqueue(job);
 
-        return Task.CompletedTask;
+        await this.state.WriteStateAsync();
     }
 
-    public Task<(int, T)?> GetJob()
+    public async Task<(int, T)?> GetJob()
     {
-        foreach (var prio in jobs.Keys.Order())
+        foreach (var prio in this.state.State.Keys.Order())
         {
-            var queue = jobs[prio];
+            var queue = this.state.State[prio];
             if (queue.Count > 0)
             {
                 var x = (prio, queue.Dequeue());
-                return Task.FromResult<(int, T)?>(x);
+
+                await this.state.WriteStateAsync();
+
+                return x;
             }
         }
 
-        return Task.FromResult<(int, T)?>(null);
+        return null;
     }
 }
