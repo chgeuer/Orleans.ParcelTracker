@@ -22,7 +22,7 @@ public class PrioritizedQueueGrain<T> : Grain, IPrioritizedQueue<T>
 
     public async Task AddJob(Job<T> job)
     {
-        logger.LogInformation("Added job {Job}", job);
+        logger.LogInformation("Added job {Job} to {Id}", job, this.GetPrimaryKeyString());
 
         if (!state.State.ContainsKey(job.Priority))
         {
@@ -46,12 +46,13 @@ public class PrioritizedQueueGrain<T> : Grain, IPrioritizedQueue<T>
 
                 await state.WriteStateAsync();
 
-                logger.LogInformation("Returning job {Job}", job);
+                logger.LogInformation("Returning job {Job} from {Id}", job, this.GetPrimaryKeyString());
 
                 return job;
             }
         }
 
+        logger.LogInformation("Poll against empty {Id}", this.GetPrimaryKeyString());
         return null;
     }
 }
