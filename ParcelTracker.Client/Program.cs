@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
 using ParcelTracker.GrainInterfaces;
+using System.Diagnostics.Eventing.Reader;
 
 internal class Program
 {
@@ -54,6 +55,15 @@ internal class Program
 
                     await Console.Out.WriteLineAsync($"Adding Prio: {job.Priority}, Job {job.JobDescription}");
                     await prioritizedQueue.AddJob(job);
+                }
+                else if (segments.Length == 3 && segments[0] == "start" && int.TryParse(segments[2], out var concurrency))
+                {
+                    var provider = segments[1];
+                    var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: provider);
+                    await configGrain.Initialize(new(
+                        MaxConcurrency: concurrency,
+                        ProviderName: provider,
+                        ProviderURL: $"https://{provider}.com"));
                 }
                 else if (segments.Length == 2 && segments[0] == "get")
                 {
