@@ -1,11 +1,11 @@
 ﻿namespace ParcelTracker.Host;
 
 using System;
-using Azure.Core;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-
-
+using Microsoft.Extensions.Hosting;
+using Azure.Core;
+using Azure.Identity;
 
 internal class Program
 {
@@ -18,28 +18,26 @@ internal class Program
             clientSecret: env(context,"ORLEANS_GRAIN_STORAGE_CLIENT_SECRET"));
 
     static (string ServiceUrl, string ContainerName) GetStorage(HostBuilderContext context)
-        => (env(context,"SERVICE_URI")?? string.Empty, "grainstate");
-
+        => (env(context, "SERVICE_URI") ?? string.Empty, "grainstate");
 
     static async Task Main(string[] args)
     {
         Console.Title = "Host";
-       
-        // var storage = GetStorage();
-
-        var storage = GetStorage();
 
         using var host = Host
             .CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration(ConfigureApp)     
-            .UseOrleans((context, sb) => sb
+            .ConfigureAppConfiguration(ConfigureApp)
+            .UseOrleans((hostBuilderContext, sb) => sb
                 .UseLocalhostClustering()
                 .UseInMemoryReminderService()
                 .AddAzureBlobGrainStorage("blobGrainStorage", o =>
                 {
-                    o.ConfigureBlobServiceClient(serviceUri: new(GetStorage(context).ServiceUrl), tokenCredential: GetStorageCredential(context));
-                    o.ContainerName = GetStorage(context).ContainerName;
+                    var (serviceUrl, containerName) = GetStorage(hostBuilderContext);
 
+                    o.ConfigureBlobServiceClient(
+                        serviceUri: new(serviceUrl),
+                        tokenCredential: GetStorageCredential(hostBuilderContext));
+                    o.ContainerName = containerName;
                 })
             )
             .Build();
@@ -56,18 +54,20 @@ internal class Program
         // try and load env params from appsettings.json
         configurationBuilder.AddJsonFile("appsettings_local.json");
         CheckConfiguration(configurationBuilder.Build());
-    }
 
-    private static void CheckConfiguration(IConfiguration configuration)
-    {
-        // confirm all environment variables are set
-        if( string.IsNullOrEmpty(configuration.GetValue<string>("ORLEANS_TENANT_ID")) ||
-            string.IsNullOrEmpty(configuration.GetValue<string>("ORLEANS_GRAIN_STORAGE_CLIENT_ID")) ||
-            string.IsNullOrEmpty(configuration.GetValue<string>("ORLEANS_GRAIN_STORAGE_CLIENT_SECRET")) ||
-            string.IsNullOrEmpty(configuration.GetValue<string>("SERVICE_URI")))
+        static void CheckConfiguration(IConfiguration configuration)
+        {
+            void EnsureConfig(string varName)
             {
-                throw new ArgumentNullException("Missing Mandatory Environment Variables");        
-            }                   
+                if (string.IsNullOrEmpty(configuration.GetValue<string>(varName)))
+                {
+                    throw new ArgumentNullException(paramName: varName, message: $"Missing configuration {varName}");
+                }
+            }
+            foreach (var requiredConfig in new[] { "SERVICE_URI", "ORLEANS_TENANT_ID", "ORLEANS_GRAIN_STORAGE_CLIENT_ID", "ORLEANS_GRAIN_STORAGE_CLIENT_SECRET" })
+            {
+                EnsureConfig(requiredConfig);
+            }
+        }
     }
-           
 }
