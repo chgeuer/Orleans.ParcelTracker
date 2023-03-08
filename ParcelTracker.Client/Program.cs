@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
 using ParcelTracker.GrainInterfaces;
+using System.Diagnostics.Eventing.Reader;
 
 internal class Program
 {
@@ -11,14 +12,25 @@ internal class Program
     {
         Console.Title = "Client";
 
-        Console.ReadLine();
+        await Console.Out.WriteLineAsync("Press <Enter> to connect to Orleans cluster...");
+        _ = await Console.In.ReadLineAsync();
 
         using var host = Host.CreateDefaultBuilder()
             .UseOrleansClient(cb => cb.UseLocalhostClustering())
             .Build();
         await host.StartAsync();
 
-        var client = host.Services.GetRequiredService<IClusterClient>();
+        var clusterClient = host.Services.GetRequiredService<IClusterClient>();
+
+        Dictionary<string, IPrioritizedQueue<string>> clients = new();
+        IPrioritizedQueue<string> getClient(string provider)
+        {
+            if (!clients.ContainsKey(provider))
+            {
+                clients[provider] = clusterClient.GetGrain<IPrioritizedQueue<string>>(primaryKey: provider);
+            }
+            return clients[provider];
+        }
 
         try
         {
@@ -34,28 +46,38 @@ internal class Program
                 if (segments.Length > 3 && segments[0] == "add" && int.TryParse(segments[2], out var prio))
                 {
                     var provider = segments[1];
-                    var prioritizedQueue = client.GetGrain<IPrioritizedQueue<string>>(primaryKey: provider);
+                    var prioritizedQueue = getClient(provider);
 
 
                     // add DHL 1 Hello world
-                    var job = string.Join(" ", segments.Skip(3));
+                    // Job<string> job = new() { Priority = prio, JobDescription = string.Join(" ", segments.Skip(3)) };
+                    Job<string> job = new(prio, string.Join(" ", segments.Skip(3)));
 
-                    await Console.Out.WriteLineAsync($"Adding Prio: {prio}, Job {job}");
-                    await prioritizedQueue.AddJob(priority: prio, job: job);
+                    await Console.Out.WriteLineAsync($"Adding Prio: {job.Priority}, Job {job.JobDescription}");
+                    await prioritizedQueue.AddJob(job);
+                }
+                else if (segments.Length == 3 && segments[0] == "start" && int.TryParse(segments[2], out var concurrency))
+                {
+                    var provider = segments[1];
+                    var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: provider);
+                    await configGrain.Initialize(new(
+                        MaxConcurrency: concurrency,
+                        ProviderName: provider,
+                        ProviderURL: $"https://{provider}.com"));
                 }
                 else if (segments.Length == 2 && segments[0] == "get")
                 {
                     var provider = segments[1];
-                    var prioritizedQueue = client.GetGrain<IPrioritizedQueue<string>>(primaryKey: provider);
+                    var prioritizedQueue = getClient(provider);
 
-                    (int, string)? result = await prioritizedQueue.GetJob();
-                    if (result == null)
+                    var job = await prioritizedQueue.GetJob();
+                    if (job == null)
                     {
                         await Console.Error.WriteLineAsync($"No job available");
                     }
                     else
                     {
-                        await Console.Out.WriteLineAsync($"Prio: {result.Value.Item1}, Job {result.Value.Item2}");
+                        await Console.Out.WriteLineAsync($"Prio: {job.Priority}, Job {job.JobDescription}");
                     }
                 }
                 else

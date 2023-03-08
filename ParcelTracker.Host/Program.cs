@@ -1,8 +1,5 @@
 ﻿namespace ParcelTracker.Host;
 
-using Azure.Identity;
-using Microsoft.Extensions.Hosting;
-using Orleans.Hosting;
 using System;
 using Azure.Core;
 using System.Threading.Tasks;
@@ -30,6 +27,8 @@ internal class Program
        
         // var storage = GetStorage();
 
+        var storage = GetStorage();
+
         using var host = Host
             .CreateDefaultBuilder(args)
             .ConfigureAppConfiguration(ConfigureApp)     
@@ -40,6 +39,7 @@ internal class Program
                 {
                     o.ConfigureBlobServiceClient(serviceUri: new(GetStorage(context).ServiceUrl), tokenCredential: GetStorageCredential(context));
                     o.ContainerName = GetStorage(context).ContainerName;
+
                 })
             )
             .Build();
