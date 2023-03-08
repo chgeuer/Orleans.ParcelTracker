@@ -31,3 +31,17 @@ public interface IProviderAPICallerGrain : IGrainWithIntegerCompoundKey
 {
     Task Initialize(ProviderConfiguration providerConfiguration);
 }
+
+public class ParcelTrackerSettings
+{
+    public OrleansGrainStorageSettings? OrleansGrainStorage { get; set; }
+}
+
+public class OrleansGrainStorageSettings
+{
+    public string? ServiceURI { get; set; }
+    public string? TenantId { get; set; }
+    public string? ClientId { get; set; }
+    public string? ClientSecret { get; set; }
+}
+

@@ -17,5 +17,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ParcelTracker.GrainImplementations\ParcelTracker.GrainImplementations.csproj" />
+    <ProjectReference Include="..\ParcelTracker.GrainInterfaces\ParcelTracker.GrainInterfaces.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

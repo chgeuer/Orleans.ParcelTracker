@@ -1,43 +1,48 @@
 ﻿namespace ParcelTracker.Host;
 
-using System;
-using System.Threading.Tasks;
+using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Azure.Core;
-using Azure.Identity;
+using ParcelTracker.GrainInterfaces;
+using System;
+using System.Threading.Tasks;
 
 internal class Program
 {
-    private static string? env(HostBuilderContext context,string name) => context.Configuration.GetValue<string>(name);
-
-    static TokenCredential GetStorageCredential(HostBuilderContext context)
-        => new ClientSecretCredential(
-            tenantId: env(context, "ORLEANS_TENANT_ID"),
-            clientId: env(context,"ORLEANS_GRAIN_STORAGE_CLIENT_ID"),
-            clientSecret: env(context,"ORLEANS_GRAIN_STORAGE_CLIENT_SECRET"));
-
-    static (string ServiceUrl, string ContainerName) GetStorage(HostBuilderContext context)
-        => (env(context, "SERVICE_URI") ?? string.Empty, "grainstate");
-
     static async Task Main(string[] args)
     {
         Console.Title = "Host";
 
         using var host = Host
             .CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration(ConfigureApp)
-            .UseOrleans((hostBuilderContext, sb) => sb
+            .ConfigureAppConfiguration((hostBuilderContext, configurationBuilder) =>
+            {
+                configurationBuilder
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddEnvironmentVariables();
+            })
+            //.ConfigureServices((hostBuilderContext, services) =>
+            //{
+            //    // not working, but might help with the IOptions<ParcelTracker> DI in the grain.
+            //    // services!.Configure<ParcelTrackerSettings>(hostBuilderContext.Configuration.GetSection("ParcelTracker"));
+            //    // working
+            //    //var parcelTracker = hostBuilderContext.Configuration.GetSection("ParcelTracker").Get<ParcelTracker>();
+            //    //services.AddSingleton(parcelTracker!);
+            //})
+            .UseOrleans((HostBuilderContext hostBuilderContext, ISiloBuilder sb) => sb
                 .UseLocalhostClustering()
                 .UseInMemoryReminderService()
                 .AddAzureBlobGrainStorage("blobGrainStorage", o =>
                 {
-                    var (serviceUrl, containerName) = GetStorage(hostBuilderContext);
+                    var ogs = hostBuilderContext.Configuration.GetSection("ParcelTracker").Get<ParcelTrackerSettings>()!.OrleansGrainStorage!;
 
                     o.ConfigureBlobServiceClient(
-                        serviceUri: new(serviceUrl),
-                        tokenCredential: GetStorageCredential(hostBuilderContext));
-                    o.ContainerName = containerName;
+                        serviceUri: new(ogs.ServiceURI!),
+                        tokenCredential: new ClientSecretCredential(
+                            tenantId: ogs.TenantId,
+                            clientId: ogs.ClientId,
+                            clientSecret: ogs.ClientSecret));
+                    o.ContainerName = "grainstate";
                 })
             )
             .Build();
@@ -47,27 +52,5 @@ internal class Program
         await Console.Out.WriteLineAsync("Started");
         _ = await Console.In.ReadLineAsync();
         await host.StopAsync();
-    }
-
-    private static void ConfigureApp(HostBuilderContext hostBuilderContext, IConfigurationBuilder configurationBuilder)
-    {
-        // try and load env params from appsettings.json
-        configurationBuilder.AddJsonFile("appsettings_local.json");
-        CheckConfiguration(configurationBuilder.Build());
-
-        static void CheckConfiguration(IConfiguration configuration)
-        {
-            void EnsureConfig(string varName)
-            {
-                if (string.IsNullOrEmpty(configuration.GetValue<string>(varName)))
-                {
-                    throw new ArgumentNullException(paramName: varName, message: $"Missing configuration {varName}");
-                }
-            }
-            foreach (var requiredConfig in new[] { "SERVICE_URI", "ORLEANS_TENANT_ID", "ORLEANS_GRAIN_STORAGE_CLIENT_ID", "ORLEANS_GRAIN_STORAGE_CLIENT_SECRET" })
-            {
-                EnsureConfig(requiredConfig);
-            }
-        }
     }
 }
