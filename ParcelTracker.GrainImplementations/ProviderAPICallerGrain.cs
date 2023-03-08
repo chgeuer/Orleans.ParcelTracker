@@ -7,38 +7,46 @@ using GrainInterfaces;
 using System.Threading;
 using Orleans.Runtime;
 
-public class ProviderAPICallerGrain : Grain, IProviderAPICallerGrain, IRemindable
+public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemindable
 {
+    public IGrainContext GrainContext { get; init; }
     private readonly ILogger<IProviderAPICallerGrain> logger;
     private readonly IClusterClient clusterClient;
     private ProviderConfiguration? providerConfiguration;
 
-    public ProviderAPICallerGrain(ILogger<IProviderAPICallerGrain> logger, IClusterClient clusterClient)
+    public ProviderAPICallerGrain(
+        IGrainContext context,
+        ILogger<IProviderAPICallerGrain> logger,
+        IClusterClient clusterClient)
     {
+        this.GrainContext = context;
         this.logger = logger;
         this.clusterClient = clusterClient;
 
-        this.RegisterOrUpdateReminder(reminderName: "reminder123", dueTime: TimeSpan.FromSeconds(3), period: TimeSpan.FromSeconds(61));
+        this.RegisterOrUpdateReminder(
+            reminderName: "reminder123",
+            dueTime: TimeSpan.FromSeconds(3),
+            period: TimeSpan.FromSeconds(61));
     }
 
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    Task IGrainBase.OnActivateAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("OnActivateAsync \"{Provider}\" Number \"{Number}\" state",
           this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
 
-        return base.OnActivateAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    Task IGrainBase.OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         logger.LogInformation("OnDeactivateAsync \"{Provider}\" Number \"{Number}\" state",
          this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
 
-        return base.OnDeactivateAsync(reason, cancellationToken);
+        return Task.CompletedTask;
     }
 
     private bool initialized = false;
-    public Task Initialize(ProviderConfiguration providerConfiguration)
+    Task IProviderAPICallerGrain.Initialize(ProviderConfiguration providerConfiguration)
     {
         logger.LogInformation("Initializing API Caller ProviderI \"{Provider}\" Number \"{Number}\" state: {Initialized}",
             this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), initialized);
@@ -51,7 +59,7 @@ public class ProviderAPICallerGrain : Grain, IProviderAPICallerGrain, IRemindabl
         return Task.CompletedTask;
     }
 
-    public Task Timer(object o)
+    private Task Timer(object o)
     {
         logger.LogInformation("Timer \"{Provider}\" Number \"{Number}\" Object {object}",
             this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), o);

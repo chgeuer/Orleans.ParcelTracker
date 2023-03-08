@@ -6,16 +6,20 @@ using Orleans;
 using GrainInterfaces;
 using Orleans.Runtime;
 
-public class PrioritizedQueueGrain<T> : Grain, IPrioritizedQueue<T>
+public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
 {
+    public IGrainContext GrainContext { get; init; }
     private readonly ILogger<PrioritizedQueueGrain<T>> logger;
     private readonly IPersistentState<Dictionary<int, Queue<T>>> state;
 
     public PrioritizedQueueGrain(
+        IGrainContext context,
         ILogger<PrioritizedQueueGrain<T>> logger,
         [PersistentState(stateName: "prioritizedQueue", storageName: "blobGrainStorage")]
-        IPersistentState<Dictionary<int, Queue<T>>> state)
+        IPersistentState<Dictionary<int, Queue<T>>> state //, IOptions<ParcelTrackerSettings> pt
+        )
     {
+        GrainContext = context;
         this.logger = logger;
         this.state = state;
     }

@@ -14,18 +14,21 @@ public class ProviderConfigurationGrainState
     public IEnumerable<int>? CurrentlyActivatedGrains { get; set; }
 }
 
-public class ProviderConfigurationGrain : Grain, IProviderConfigurationGrain
+public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrain
 {
+    public IGrainContext GrainContext { get; init; }
     private readonly ILogger<IProviderConfigurationGrain> logger;
     private readonly IPersistentState<ProviderConfigurationGrainState> state;
     private readonly IClusterClient clusterClient;
 
     public ProviderConfigurationGrain(
+        IGrainContext context,
         ILogger<IProviderConfigurationGrain> logger,
         [PersistentState(stateName: "providerConfiguration", storageName: "blobGrainStorage")]
         IPersistentState<ProviderConfigurationGrainState> state,
         IClusterClient clusterClient)
     {
+        this.GrainContext = context;
         this.logger = logger;
 
         logger.LogInformation("Constructor ProviderConfigurationGrain {State}", state);
@@ -33,12 +36,12 @@ public class ProviderConfigurationGrain : Grain, IProviderConfigurationGrain
         this.clusterClient = clusterClient;
     }
 
-    public Task<ProviderConfiguration?> GetConfiguration()
+    Task<ProviderConfiguration?> IProviderConfigurationGrain.GetConfiguration()
     {
         return Task.FromResult(state.State.ProviderConfiguration);
     }
 
-    public async Task Initialize(ProviderConfiguration providerConfiguration)
+    async Task IProviderConfigurationGrain.Initialize(ProviderConfiguration providerConfiguration)
     {
         logger.LogInformation("Initializing {Provider}", providerConfiguration.ProviderName);
 
