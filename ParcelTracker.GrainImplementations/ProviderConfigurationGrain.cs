@@ -61,7 +61,8 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
         // Kick off the API caller grains...
         var initializers = Enumerable
             .Range(0, providerConfiguration.MaxConcurrency)
-            .Select(initialize);
+            .Select(initialize)
+            .ToArray();
 
         await Task.WhenAll(initializers.Select(i => i.Task));
 

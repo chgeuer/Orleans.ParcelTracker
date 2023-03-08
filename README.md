@@ -16,5 +16,8 @@ ParcelTracker__OrleansGrainStorage__ClientSecret=...
 The demo uses a service principal to persist grain state in Azure blob storage.
 
 
+## Notes
 
- 
+- @ReubenBond: There are a few different kinds of rate limiters there. One of them is a concurrency limiter: https://github.com/ReubenBond/DistributedRateLimiting.Orleans
+- Check Priority queue from .NET
+- `[KeepAliveAttribute]` on API Grain?
