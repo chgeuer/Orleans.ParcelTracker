@@ -4,3 +4,4 @@ bin
 obj
 packages
 
+ParcelTracker.Host/appsettings_local.json
