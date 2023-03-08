@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.Orleans.Runtime" Version="7.1.0" />
     <PackageReference Include="Microsoft.Orleans.Persistence.AzureStorage" Version="7.1.0" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="7.1.0" />
+    <PackageReference Include="Microsoft.Orleans.Reminders" Version="7.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ParcelTracker.GrainImplementations\ParcelTracker.GrainImplementations.csproj" />
