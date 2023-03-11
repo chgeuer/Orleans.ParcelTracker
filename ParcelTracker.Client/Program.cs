@@ -40,7 +40,7 @@ internal class Program
     static async Task Main()
     {
         Console.Title = "Client";
-        
+
         await Console.Out.WriteLineAsync("Press <Enter> to connect to Orleans cluster...");
         _ = await Console.In.ReadLineAsync();
 
@@ -132,7 +132,6 @@ internal class Program
                 {
                     // load the jobs from the json file provided in segments[2]
                     string jobs = await ReadFileAsync(segments[2]);       
-                    Console.WriteLine(jobs);
                     TaRs ?list = JsonSerializer.Deserialize<TaRs>(jobs);                     
                     if (list == null || list.tars == null|| list.tars.Count == 0)
                     {
