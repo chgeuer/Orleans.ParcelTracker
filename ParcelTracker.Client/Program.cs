@@ -115,7 +115,7 @@ internal class Program
                         Console.WriteLine("No providers found in the configuration file");
                         continue;
                     }
-
+                    Console.WriteLine($"{list.Length} providers found in the configuration file, creating grains");
                     foreach (var _provider in list!)
                     {
                         
@@ -138,7 +138,7 @@ internal class Program
                         Console.WriteLine("No jobs found in the configuration file");
                         continue;
                     }
-
+                    Console.WriteLine($"{list.tars.Count} jobs found for {list.ProviderName} provider in the configuration file, adding to the queue");
                     foreach (var tar in list.tars)
                     {
                         var prioritizedQueue = getClient(list.ProviderName??ProviderConfig.DefaultProviderName);
