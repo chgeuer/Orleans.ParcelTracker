@@ -1,16 +1,13 @@
 ﻿namespace ParcelTracker.Client;
 
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
-using ParcelTracker.GrainInterfaces;
-using System.Diagnostics.Eventing.Reader;
-using System.Text.Json;
-
+using GrainInterfaces;
 
 internal class Program
 {
-
     private class TaR
     {
         public string ?Name { get; set; }
@@ -24,6 +21,7 @@ internal class Program
         public string ?ProviderName { get; set; }
         public List<TaR> ?tars { get; set; }
     }
+
     private class ProviderConfig
     {
         // default provider name constant
@@ -33,9 +31,7 @@ internal class Program
         public string ?Name { get; set; }
         public string ?URL { get; set; }
         public int ConcurrentExecutions { get; set; }
-        
     }
- 
 
     static async Task Main()
     {
@@ -79,7 +75,7 @@ internal class Program
                 {
                     break;
                 }
-                
+
                 var segments = line.Split(' ');
                 if (segments.Length > 3 && segments[0] == "add" && int.TryParse(segments[2], out var prio))
                 {
@@ -108,8 +104,8 @@ internal class Program
                 else if (segments.Length == 3 && segments[0] == "load" && segments[1] == "providers")
                 {
                     // load the provider configuration from the json file provided in segments[2]
-                    string providers = await ReadFileAsync(segments[2]);                    
-                    ProviderConfig [] ?list = JsonSerializer.Deserialize<ProviderConfig[]>(providers);                    
+                    string providers = await ReadFileAsync(segments[2]);
+                    ProviderConfig [] ?list = JsonSerializer.Deserialize<ProviderConfig[]>(providers);
                     if(list == null || list.Length == 0)
                     {
                         Console.WriteLine("No providers found in the configuration file");
@@ -118,7 +114,7 @@ internal class Program
                     Console.WriteLine($"{list.Length} providers found in the configuration file, creating grains");
                     foreach (var _provider in list!)
                     {
-                        
+
                         var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: _provider.Name);
                         await configGrain.Initialize(new(
                             MaxConcurrency: _provider.ConcurrentExecutions,
@@ -131,8 +127,8 @@ internal class Program
                 else if( segments.Length == 3 && segments[0] == "load" && segments[1] == "jobs")
                 {
                     // load the jobs from the json file provided in segments[2]
-                    string jobs = await ReadFileAsync(segments[2]);       
-                    TaRs ?list = JsonSerializer.Deserialize<TaRs>(jobs);                     
+                    string jobs = await ReadFileAsync(segments[2]);
+                    TaRs ?list = JsonSerializer.Deserialize<TaRs>(jobs);
                     if (list == null || list.tars == null|| list.tars.Count == 0)
                     {
                         Console.WriteLine("No jobs found in the configuration file");
