@@ -7,6 +7,7 @@ using GrainInterfaces;
 using System.Threading;
 using Orleans.Runtime;
 
+[KeepAlive]
 public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemindable
 {
     public IGrainContext GrainContext { get; init; }

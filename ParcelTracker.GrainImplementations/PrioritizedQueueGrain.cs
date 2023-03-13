@@ -10,6 +10,8 @@ public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
 {
     public IGrainContext GrainContext { get; init; }
     private readonly ILogger<PrioritizedQueueGrain<T>> logger;
+
+    // TODO Check whether a https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.priorityqueue-2?view=net-7.0 would serialize into Grain state.
     private readonly IPersistentState<Dictionary<int, Queue<T>>> state;
 
     public PrioritizedQueueGrain(
@@ -24,39 +26,46 @@ public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
         this.state = state;
     }
 
-    public async Task AddJob(Job<T> job)
+    Task IPrioritizedQueue<T>.AddJob(Job<T> job) => state.State.AddJob(job, state.WriteStateAsync);
+
+    Task<Job<T>?> IPrioritizedQueue<T>.GetJob() => state.State.GetJob<T>(state.WriteStateAsync);
+}
+
+internal static class PrioritizedQueueExtension
+{
+    internal static async Task AddJob<T>(this Dictionary<int, Queue<T>> queue, Job<T> job, Func<Task> persistChanges)
     {
-        logger.LogInformation("Added job {Job} to {Id}", job, this.GetPrimaryKeyString());
-
-        if (!state.State.ContainsKey(job.Priority))
+        if (!queue.ContainsKey(job.Priority))
         {
-            state.State[job.Priority] = new();
+            queue[job.Priority] = new();
         }
+        queue[job.Priority].Enqueue(job.JobDescription);
 
-        state.State[job.Priority].Enqueue(job.JobDescription);
-
-        await state.WriteStateAsync();
+        if (persistChanges != null)
+        {
+            await persistChanges();
+        }
     }
 
-    public async Task<Job<T>?> GetJob()
+    internal async static Task<Job<T>?> GetJob<T>(this Dictionary<int, Queue<T>> prioritizedQueue, Func<Task> persistChanges)
     {
-        foreach (var prio in state.State.Keys.Order())
+        foreach (var prio in prioritizedQueue.Keys.Order())
         {
-            var queue = state.State[prio];
+            var queue = prioritizedQueue[prio];
             if (queue.Count > 0)
             {
                 // Remove item from state, save updated state and return result.
                 Job<T> job = new(prio, queue.Dequeue());
 
-                await state.WriteStateAsync();
-
-                logger.LogInformation("Returning job {Job} from {Id}", job, this.GetPrimaryKeyString());
+                if (persistChanges != null)
+                {
+                    await persistChanges();
+                }
 
                 return job;
             }
         }
 
-        logger.LogInformation("Poll against empty {Id}", this.GetPrimaryKeyString());
         return null;
     }
 }
