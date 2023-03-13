@@ -1,0 +1,13 @@
+
+[
+    {
+        "Name": "ProviderC", 
+        "URL": "http://www.provider1.com", 
+        "ConcurrentExecutions": 2
+    },
+    {
+        "Name": "ProviderD", 
+        "URL": "http://www.provider2.com", 
+        "ConcurrentExecutions": 4 
+    }
+] 
