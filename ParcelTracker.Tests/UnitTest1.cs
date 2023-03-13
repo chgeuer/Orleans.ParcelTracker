@@ -1,18 +1,17 @@
 namespace ParcelTracker.Tests
 {
-
     internal static class MyExtension
     {
-        internal static Func<Task> PutJob<T>(this Dictionary<int, Queue<T>> queue, int prio, T value)
+        internal static Func<Task> PutJob<T>(this Dictionary<int, Queue<T>> queue, int prio, T value, Func<Task>? persist = null)
         {
-            return () => queue.AddJob(new Job<T>(Priority: prio, JobDescription: value));
+            return () => queue.AddJob(new Job<T>(Priority: prio, JobDescription: value), persist);
         }
 
-        internal static Func<Task> AssertNextJobIs<T>(this Dictionary<int, Queue<T>> queue, T? expected)
+        internal static Func<Task> AssertNextJobIs<T>(this Dictionary<int, Queue<T>> queue, T? expected, Func<Task>? persist = null)
         {
             return async () =>
             {
-                var job = await queue.GetJob();
+                var job = await queue.GetJob(persist);
                 if (job == null)
                 {
                     Assert.That(expected, Is.Null);
@@ -73,18 +72,20 @@ namespace ParcelTracker.Tests
 
             IEnumerable<Func<Task>> tasks = new[]
             {
-                q.PutJob(1, 1), // 1: 1
-                q.AssertNextJobIs(1), // []
+                q.PutJob(1, 1),       // 1: [1]
+                q.AssertNextJobIs(1), // empty
                 q.AssertNextJobIs(null),
-                q.PutJob(10, 2), // 10: 2
+                q.PutJob(10, 2),      // 10: [2]
                 q.AssertNextJobIs(2), // empty
                 q.AssertNextJobIs(null),
-                q.PutJob(5, 3), // 5: 3
-                q.PutJob(1, 4), // 1: 4, 5: 3
-                q.AssertNextJobIs(4), // 5: 3
-                q.PutJob(1, 5), // 1: 5, 5: 3
-                q.AssertNextJobIs(5), // 5: 3
-                q.AssertNextJobIs(3), // empty
+                q.PutJob(5, 3),       // 5: [3]
+                q.PutJob(1, 4),       // 1: [4], 5: [3]
+                q.AssertNextJobIs(4), // 5: [3]
+                q.PutJob(1, 5),       // 1: [5], 5: [3]
+                q.PutJob(5, 6),       // 1: [5], 5: [3, 6]
+                q.AssertNextJobIs(5), // 5: [3, 6]
+                q.AssertNextJobIs(3), // 5: [6]
+                q.AssertNextJobIs(6), // empty
                 q.AssertNextJobIs(null),
             };
 

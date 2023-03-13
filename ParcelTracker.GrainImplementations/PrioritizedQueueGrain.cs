@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using GrainInterfaces;
 using Orleans.Runtime;
+using System.Runtime.CompilerServices;
 
 public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
 {
@@ -33,6 +34,9 @@ public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
 
 public static class PrioritizedQueueExtension
 {
+    // The idea of writing the logic as extension functions on the data type allows us to unit test the logic without having to
+    // instantiate a PrioritizedQueueGrain.
+
     public static async Task AddJob<T>(this Dictionary<int, Queue<T>> queue, Job<T> job, Func<Task>? persistChanges = null)
     {
         if (!queue.ContainsKey(job.Priority))
