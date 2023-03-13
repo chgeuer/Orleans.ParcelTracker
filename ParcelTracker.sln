@@ -3,15 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33414.496
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParcelTracker.GrainInterfaces", "ParcelTracker.GrainInterfaces\ParcelTracker.GrainInterfaces.csproj", "{8371D4DD-174E-4ECB-9323-D29F2A715417}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParcelTracker.GrainInterfaces", "ParcelTracker.GrainInterfaces\ParcelTracker.GrainInterfaces.csproj", "{8371D4DD-174E-4ECB-9323-D29F2A715417}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParcelTracker.GrainImplementations", "ParcelTracker.GrainImplementations\ParcelTracker.GrainImplementations.csproj", "{95B90124-768E-4A69-BEAB-679A2506CA20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParcelTracker.GrainImplementations", "ParcelTracker.GrainImplementations\ParcelTracker.GrainImplementations.csproj", "{95B90124-768E-4A69-BEAB-679A2506CA20}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParcelTracker.Host", "ParcelTracker.Host\ParcelTracker.Host.csproj", "{5E9B4627-4823-4B0B-83BF-0AAF9EB2EA63}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParcelTracker.Client", "ParcelTracker.Client\ParcelTracker.Client.csproj", "{7BE3BBF4-5194-486D-A8F6-B5D34CBE8939}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParcelTracker.Client", "ParcelTracker.Client\ParcelTracker.Client.csproj", "{7BE3BBF4-5194-486D-A8F6-B5D34CBE8939}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{1290BA87-DCDA-4310-A859-D44528EEE036}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParcelTracker.Tests", "ParcelTracker.Tests\ParcelTracker.Tests.csproj", "{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +37,10 @@ Global
 		{7BE3BBF4-5194-486D-A8F6-B5D34CBE8939}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BE3BBF4-5194-486D-A8F6-B5D34CBE8939}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7BE3BBF4-5194-486D-A8F6-B5D34CBE8939}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -43,6 +49,7 @@ Global
 		{8371D4DD-174E-4ECB-9323-D29F2A715417} = {1290BA87-DCDA-4310-A859-D44528EEE036}
 		{95B90124-768E-4A69-BEAB-679A2506CA20} = {1290BA87-DCDA-4310-A859-D44528EEE036}
 		{5E9B4627-4823-4B0B-83BF-0AAF9EB2EA63} = {1290BA87-DCDA-4310-A859-D44528EEE036}
+		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749} = {1290BA87-DCDA-4310-A859-D44528EEE036}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D15C0E62-0679-4B13-834C-B67E5026F600}

@@ -31,9 +31,9 @@ public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
     Task<Job<T>?> IPrioritizedQueue<T>.GetJob() => state.State.GetJob<T>(state.WriteStateAsync);
 }
 
-internal static class PrioritizedQueueExtension
+public static class PrioritizedQueueExtension
 {
-    internal static async Task AddJob<T>(this Dictionary<int, Queue<T>> queue, Job<T> job, Func<Task> persistChanges)
+    public static async Task AddJob<T>(this Dictionary<int, Queue<T>> queue, Job<T> job, Func<Task>? persistChanges = null)
     {
         if (!queue.ContainsKey(job.Priority))
         {
@@ -47,7 +47,7 @@ internal static class PrioritizedQueueExtension
         }
     }
 
-    internal async static Task<Job<T>?> GetJob<T>(this Dictionary<int, Queue<T>> prioritizedQueue, Func<Task> persistChanges)
+    public async static Task<Job<T>?> GetJob<T>(this Dictionary<int, Queue<T>> prioritizedQueue, Func<Task>? persistChanges = null)
     {
         foreach (var prio in prioritizedQueue.Keys.Order())
         {
