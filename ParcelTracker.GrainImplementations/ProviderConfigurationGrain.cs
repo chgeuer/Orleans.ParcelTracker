@@ -28,35 +28,49 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
         logger.LogDebug("{GrainId} {MethodName} \"{ProviderName}\"",
            GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize), configuration.ProviderName);
 
-        providerConfiguration = configuration;
-
-        (int Id, Task Task) initialize(int primaryKey)
+        if (providerConfiguration == null)
         {
-            var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
-                    primaryKey: primaryKey,
-                    keyExtension: configuration.ProviderName);
+            providerConfiguration = configuration;
 
-            logger.LogDebug("Instantiate {Provider}-{Id}", providerConfiguration.ProviderName, primaryKey);
+            (int Id, Task Task) initialize(int primaryKey)
+            {
+                var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
+                        primaryKey: primaryKey,
+                        keyExtension: configuration.ProviderName);
 
-            return (primaryKey, client.Initialize(providerConfiguration));
+                logger.LogDebug("Instantiate {Provider}-{Id}", providerConfiguration.ProviderName, primaryKey);
+
+                return (primaryKey, client.Initialize(providerConfiguration));
+            }
+
+            // Kick off the API caller grains...
+            var initializers = Enumerable
+                .Range(0, configuration.MaxConcurrency)
+                .Select(initialize)
+                .ToArray();
+
+            await Task.WhenAll(initializers.Select(i => i.Task));
+
+            logger.LogInformation("{GrainId} {MethodName} Initialized {Provider} with {InstanceCount} instances",
+                GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize),
+                configuration.ProviderName, initializers.Length);
         }
-
-        // Kick off the API caller grains...
-        var initializers = Enumerable
-            .Range(0, configuration.MaxConcurrency)
-            .Select(initialize)
-            .ToArray();
-
-        await Task.WhenAll(initializers.Select(i => i.Task));
-
-        logger.LogInformation("{GrainId} {MethodName} Initialized {Provider} with {InstanceCount} instances",
-            GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize),
-            configuration.ProviderName, initializers.Length);
+        else
+        {
+            if (configuration.MaxConcurrency < providerConfiguration.MaxConcurrency)
+            {
+                for (var i = configuration.MaxConcurrency; i < providerConfiguration.MaxConcurrency; i++)
+                {
+                    var client = clusterClient.GetGrain<IProviderAPICallerGrain>(primaryKey: i,
+                         keyExtension: configuration.ProviderName);
+                    await client.Deactivate(configuration.MaxConcurrency);
+                }
+            }
+        }
     }
 
     Task<ProviderConfiguration?> IProviderConfigurationGrain.GetConfiguration()
     {
         return Task.FromResult(providerConfiguration);
     }
-
 }

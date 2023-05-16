@@ -28,4 +28,5 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ProjectExtensions><VisualStudio><UserProperties providers_1json__JsonSchema=". " /></VisualStudio></ProjectExtensions>
 </Project>
