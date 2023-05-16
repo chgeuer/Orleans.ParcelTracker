@@ -1,11 +1,11 @@
 ﻿namespace ParcelTracker.GrainImplementations;
 
-using System.Threading.Tasks;
+using GrainInterfaces;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using GrainInterfaces;
-using System.Threading;
 using Orleans.Runtime;
+using System.Threading;
+using System.Threading.Tasks;
 
 [KeepAlive]
 public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemindable
@@ -20,9 +20,7 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
         ILogger<IProviderAPICallerGrain> logger,
         IClusterClient clusterClient)
     {
-        this.GrainContext = context;
-        this.logger = logger;
-        this.clusterClient = clusterClient;
+        (GrainContext, this.logger, this.clusterClient) = (context, logger, clusterClient);
 
         this.RegisterOrUpdateReminder(
             reminderName: "reminder123",
@@ -32,16 +30,20 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
 
     Task IGrainBase.OnActivateAsync(CancellationToken cancellationToken)
     {
-        logger.LogInformation("OnActivateAsync \"{Provider}\" Number \"{Number}\" state",
-          this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" state",
+            GrainContext.GrainId,
+            nameof(IGrainBase.OnActivateAsync),
+            this.GetPrimaryKeyString(),
+            this.GetPrimaryKeyLong());
 
         return Task.CompletedTask;
     }
 
     Task IGrainBase.OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        logger.LogInformation("OnDeactivateAsync \"{Provider}\" Number \"{Number}\" state",
-         this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\"",
+            GrainContext.GrainId, nameof(IGrainBase.OnDeactivateAsync),
+            this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
 
         return Task.CompletedTask;
     }
@@ -49,8 +51,9 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
     private bool initialized = false;
     Task IProviderAPICallerGrain.Initialize(ProviderConfiguration providerConfiguration)
     {
-        logger.LogInformation("Initializing API Caller ProviderI \"{Provider}\" Number \"{Number}\" state: {Initialized}",
-            this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), initialized);
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" state: {Initialized}",
+           GrainContext.GrainId, nameof(IProviderAPICallerGrain.Initialize),
+           this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), initialized);
 
         initialized = true;
         this.providerConfiguration = providerConfiguration;
@@ -62,7 +65,8 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
 
     private Task Timer(object o)
     {
-        logger.LogInformation("Timer \"{Provider}\" Number \"{Number}\" Object {object}",
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" Object {object}",
+            GrainContext.GrainId, nameof(this.Timer),
             this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), o);
 
         return Task.CompletedTask;
@@ -70,7 +74,8 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
 
     Task IRemindable.ReceiveReminder(string reminderName, TickStatus status)
     {
-        logger.LogInformation("ReceiveReminder \"{Provider}\" Number \"{Number}\" ReminderName {reminderName} TickStatus {TickStatus}",
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" ReminderName {reminderName} TickStatus {TickStatus}",
+            GrainContext.GrainId, nameof(IRemindable.ReceiveReminder),
             this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), reminderName, status);
 
         return Task.CompletedTask;

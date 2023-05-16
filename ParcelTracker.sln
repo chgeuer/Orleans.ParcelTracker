@@ -13,7 +13,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParcelTracker.Client", "Par
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{1290BA87-DCDA-4310-A859-D44528EEE036}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParcelTracker.Tests", "ParcelTracker.Tests\ParcelTracker.Tests.csproj", "{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParcelTracker.Tests", "ParcelTracker.Tests\ParcelTracker.Tests.csproj", "{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FF4E3D24-DFC3-4809-AB3B-E58A03F40406}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -15,7 +15,6 @@ ParcelTracker__OrleansGrainStorage__ClientSecret=...
 
 The demo uses a service principal to persist grain state in Azure blob storage.
 
-
 ## Client Commands
 
 ### Batch Commands

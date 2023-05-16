@@ -1,51 +1,41 @@
 ﻿namespace ParcelTracker.GrainImplementations;
 
-using System.Threading.Tasks;
+using GrainInterfaces;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Runtime;
-using GrainInterfaces;
+using System.Threading.Tasks;
 
-[GenerateSerializer]
-public class ProviderConfigurationGrainState
-{
-    public ProviderConfiguration? ProviderConfiguration { get; set; }
 
-    public IEnumerable<int>? CurrentlyActivatedGrains { get; set; }
-}
 
 public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrain
 {
     public IGrainContext GrainContext { get; init; }
     private readonly ILogger<IProviderConfigurationGrain> logger;
-    private readonly IPersistentState<ProviderConfigurationGrainState> state;
     private readonly IClusterClient clusterClient;
+    private ProviderConfiguration? state;
 
     public ProviderConfigurationGrain(
-        IGrainContext context,
+        IGrainContext grainContext,
         ILogger<IProviderConfigurationGrain> logger,
-        [PersistentState(stateName: "providerConfiguration", storageName: "blobGrainStorage")]
-        IPersistentState<ProviderConfigurationGrainState> state,
         IClusterClient clusterClient)
     {
-        this.GrainContext = context;
-        this.logger = logger;
+        logger.LogDebug("{GrainType}({State})", nameof(ProviderConfigurationGrain), state);
 
-        logger.LogInformation("Constructor ProviderConfigurationGrain {State}", state);
-        this.state = state;
-        this.clusterClient = clusterClient;
+        (GrainContext, this.logger, this.clusterClient) = (grainContext, logger, clusterClient);
     }
 
     Task<ProviderConfiguration?> IProviderConfigurationGrain.GetConfiguration()
     {
-        return Task.FromResult(state.State.ProviderConfiguration);
+        return Task.FromResult(state);
     }
 
     async Task IProviderConfigurationGrain.Initialize(ProviderConfiguration providerConfiguration)
     {
-        logger.LogInformation("Initializing {Provider}", providerConfiguration.ProviderName);
+        logger.LogDebug("{GrainId} {MethodName} \"{ProviderName}\"",
+           GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize), providerConfiguration.ProviderName);
 
-        state.State.ProviderConfiguration = providerConfiguration;
+        state = providerConfiguration;
 
         (int Id, Task Task) initialize(int primaryKey)
         {
@@ -66,12 +56,8 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
         await Task.WhenAll(initializers.Select(i => i.Task));
 
-        state.State.CurrentlyActivatedGrains = initializers.Select(i => i.Id).ToArray();
-
-        logger.LogInformation("Initialized {Provider} with {InstanceCount}",
-            providerConfiguration.ProviderName,
-            state.State.CurrentlyActivatedGrains.Count());
-
-        await state.WriteStateAsync();
+        logger.LogInformation("{GrainId} {MethodName} Initialized {Provider} with {InstanceCount} instances",
+            GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize),
+            providerConfiguration.ProviderName, initializers.Length);
     }
 }

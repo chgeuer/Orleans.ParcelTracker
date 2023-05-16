@@ -1,13 +1,12 @@
 ﻿namespace ParcelTracker.GrainImplementations;
 
-using System.Threading.Tasks;
+using GrainInterfaces;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using GrainInterfaces;
 using Orleans.Runtime;
-using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
-public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
+public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueueGrain<T>
 {
     public IGrainContext GrainContext { get; init; }
     private readonly ILogger<PrioritizedQueueGrain<T>> logger;
@@ -27,9 +26,9 @@ public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueue<T>
         this.state = state;
     }
 
-    Task IPrioritizedQueue<T>.AddJob(Job<T> job) => state.State.AddJob(job, state.WriteStateAsync);
+    Task IPrioritizedQueueGrain<T>.AddJob(Job<T> job) => state.State.AddJob(job, state.WriteStateAsync);
 
-    Task<Job<T>?> IPrioritizedQueue<T>.GetJob() => state.State.GetJob<T>(state.WriteStateAsync);
+    Task<Job<T>?> IPrioritizedQueueGrain<T>.GetJob() => state.State.GetJob<T>(state.WriteStateAsync);
 }
 
 public static class PrioritizedQueueExtension
@@ -70,6 +69,6 @@ public static class PrioritizedQueueExtension
             }
         }
 
-        return null;
+        return default;
     }
 }

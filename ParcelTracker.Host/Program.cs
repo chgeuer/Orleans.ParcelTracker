@@ -2,6 +2,7 @@
 
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ParcelTracker.GrainInterfaces;
 using System;
@@ -48,6 +49,25 @@ internal class Program
             .Build();
 
         await host.StartAsync();
+
+        static async Task BootstrapProviders()
+        {
+            using var clientHost = Host
+                .CreateDefaultBuilder()
+                .UseOrleansClient(cb => cb.UseLocalhostClustering())
+                .Build();
+            await clientHost.StartAsync();
+
+            var clusterClient = clientHost.Services.GetRequiredService<IClusterClient>();
+
+            var providerBootstrap = clusterClient.GetGrain<IProviderBootstrapGrain>(primaryKey: "bootstrapSingleton");
+            await providerBootstrap.ActivateAllProviders();
+
+            await providerBootstrap.AddAndActivateProvider(new(
+                MaxConcurrency: 2, ProviderName: "DHL", ProviderURL: "https://localhost/DHL"));
+        }
+
+        await BootstrapProviders();
 
         await Console.Out.WriteLineAsync("Started");
         _ = await Console.In.ReadLineAsync();
