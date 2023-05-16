@@ -2,7 +2,7 @@
   "Providers": {
     "DHL": {
       "ProviderName": "DHL",
-      "MaxConcurrency": 2,
+      "MaxConcurrency": 1,
       "ProviderURL": "http://dhl.com"
     },
     "Contoso": {
@@ -12,7 +12,7 @@
     },
     "Fabrikam": {
       "ProviderName": "Fabrikam",
-      "MaxConcurrency": 7,
+      "MaxConcurrency": 1,
       "ProviderURL": "http://fabrikam.com"
     }
   }

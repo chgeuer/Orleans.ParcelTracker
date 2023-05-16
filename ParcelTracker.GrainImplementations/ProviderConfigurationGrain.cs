@@ -1,17 +1,11 @@
 ﻿namespace ParcelTracker.GrainImplementations;
 
-using GrainInterfaces;
-using Microsoft.Extensions.Logging;
-using Orleans;
-using Orleans.Runtime;
-using System.Threading.Tasks;
-
 public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrain
 {
     public IGrainContext GrainContext { get; init; }
     private readonly ILogger<IProviderConfigurationGrain> logger;
     private readonly IClusterClient clusterClient;
-    private ProviderConfiguration? providerConfiguration;
+    private ProviderConfiguration? configuration;
 
     public ProviderConfigurationGrain(
         IGrainContext grainContext,
@@ -23,29 +17,29 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
         (GrainContext, this.logger, this.clusterClient) = (grainContext, logger, clusterClient);
     }
 
-    async Task IProviderConfigurationGrain.Initialize(ProviderConfiguration configuration)
+    async Task IProviderConfigurationGrain.Initialize(ProviderConfiguration newConfiguration)
     {
         logger.LogDebug("{GrainId} {MethodName} \"{ProviderName}\"",
-           GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize), configuration.ProviderName);
+           GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize), newConfiguration.ProviderName);
 
-        if (providerConfiguration == null)
+        if (configuration == null)
         {
-            providerConfiguration = configuration;
+            configuration = newConfiguration;
 
             (int Id, Task Task) initialize(int primaryKey)
             {
                 var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
                         primaryKey: primaryKey,
-                        keyExtension: configuration.ProviderName);
+                        keyExtension: newConfiguration.ProviderName);
 
-                logger.LogDebug("Instantiate {Provider}-{Id}", providerConfiguration.ProviderName, primaryKey);
+                logger.LogDebug("Instantiate {Provider}-{Id}", configuration.ProviderName, primaryKey);
 
-                return (primaryKey, client.Initialize(providerConfiguration));
+                return (primaryKey, client.Initialize(configuration));
             }
 
             // Kick off the API caller grains...
             var initializers = Enumerable
-                .Range(0, configuration.MaxConcurrency)
+                .Range(0, newConfiguration.MaxConcurrency)
                 .Select(initialize)
                 .ToArray();
 
@@ -53,17 +47,28 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
             logger.LogInformation("{GrainId} {MethodName} Initialized {Provider} with {InstanceCount} instances",
                 GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize),
-                configuration.ProviderName, initializers.Length);
+                newConfiguration.ProviderName, initializers.Length);
         }
         else
         {
-            if (configuration.MaxConcurrency < providerConfiguration.MaxConcurrency)
+            // The ProviderConfigurationGrain is initialized a 2nd time, potentially with a different configuration.
+            // If we're running too many API workers, need to de-activate some.
+            //
+            var max = Math.Max(newConfiguration.MaxConcurrency, configuration.MaxConcurrency);
+            foreach (var instanceNumber in Enumerable.Range(0, count: max))
             {
-                for (var i = configuration.MaxConcurrency; i < providerConfiguration.MaxConcurrency; i++)
+                var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
+                    primaryKey: instanceNumber, keyExtension: newConfiguration.ProviderName);
+
+                if (instanceNumber < newConfiguration.MaxConcurrency)
                 {
-                    var client = clusterClient.GetGrain<IProviderAPICallerGrain>(primaryKey: i,
-                         keyExtension: configuration.ProviderName);
-                    await client.Deactivate(configuration.MaxConcurrency);
+                    // This one is certainly already running, will re-initialize.
+                    await client.Initialize(newConfiguration);
+                }
+                else
+                {
+                    // newConfiguration.MaxConcurrency >= current Configuration's MaxConcurrency
+                    await client.Deactivate();
                 }
             }
         }
@@ -71,6 +76,6 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
     Task<ProviderConfiguration?> IProviderConfigurationGrain.GetConfiguration()
     {
-        return Task.FromResult(providerConfiguration);
+        return Task.FromResult(configuration);
     }
 }

@@ -157,6 +157,32 @@ internal class Program
                         await Console.Out.WriteLineAsync($"Prio: {job.Priority}, Job {job.JobDescription}");
                     }
                 }
+                else if (segments.Length == 2 && segments[0] == "inc")
+                {
+                    var provider = segments[1];
+
+                    var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: provider);
+                    var oldCfg = await configGrain.GetConfiguration();
+                    if (oldCfg != null)
+                    {
+                        var newConcurrency = oldCfg.MaxConcurrency + 1;
+                        await configGrain.Initialize(oldCfg with { MaxConcurrency = newConcurrency });
+                        await Console.Out.WriteLineAsync($"Set concurrency for {provider} to {newConcurrency}");
+                    }
+                }
+                else if (segments.Length == 2 && segments[0] == "dec")
+                {
+                    var provider = segments[1];
+
+                    var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: provider);
+                    var oldCfg = await configGrain.GetConfiguration();
+                    if (oldCfg != null)
+                    {
+                        var newConcurrency = Math.Max(oldCfg.MaxConcurrency - 1, 1);
+                        await configGrain.Initialize(oldCfg with { MaxConcurrency = newConcurrency });
+                        await Console.Out.WriteLineAsync($"Set concurrency for {provider} to {newConcurrency}");
+                    }
+                }
                 else
                 {
                     await Console.Error.WriteLineAsync($"Could not parse \"{line}\"");

@@ -1,8 +1,5 @@
 ﻿namespace ParcelTracker.GrainImplementations.ServiceImplementations;
 
-using ParcelTracker.GrainInterfaces;
-using System.Reflection;
-
 public interface ITrackingClient
 {
     Task<string> FetchStatus(ProviderConfiguration configuration, string parcelNumber);

@@ -1,7 +1,5 @@
 ﻿namespace ParcelTracker.GrainImplementations.ServiceImplementations;
 
-using ParcelTracker.GrainInterfaces;
-
 [TrackingClient("Contoso")]
 internal class ContosoShipping : ITrackingClient
 {
