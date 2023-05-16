@@ -21,7 +21,9 @@ public class IProviderBootstrap : IGrainBase, IProviderBootstrapGrain
     public IProviderBootstrap(
         IGrainContext context,
         ILogger<IProviderBootstrap> logger,
-        [PersistentState(stateName: "providerBootstrap", storageName: "blobGrainStorage")]
+        [PersistentState(
+            stateName: ParcelTrackerConstants.StateType.ProviderBootstrap,
+            storageName: ParcelTrackerConstants.GrainStorageName)]
         IPersistentState<Dictionary<string, ProviderConfiguration>> state,
         IClusterClient clusterClient
         )

@@ -17,7 +17,7 @@ public class PrioritizedQueueGrain<T> : IGrainBase, IPrioritizedQueueGrain<T>
     public PrioritizedQueueGrain(
         IGrainContext context,
         ILogger<PrioritizedQueueGrain<T>> logger,
-        [PersistentState(stateName: "prioritizedQueue", storageName: "blobGrainStorage")]
+        [PersistentState(stateName: ParcelTrackerConstants.StateType.PrioritizedQueue, storageName: ParcelTrackerConstants.GrainStorageName)]
         IPersistentState<Dictionary<int, Queue<T>>> state //, IOptions<ParcelTrackerSettings> pt
         )
     {

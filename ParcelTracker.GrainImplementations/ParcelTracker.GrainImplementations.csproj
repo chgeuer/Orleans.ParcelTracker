@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ParcelTracker.GrainInterfaces\ParcelTracker.GrainInterfaces.csproj" />
+    <ProjectReference Include="..\ParcelTracker.Names\ParcelTracker.Names.csproj" />
   </ItemGroup>
 </Project>

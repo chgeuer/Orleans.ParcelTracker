@@ -1,0 +1,9 @@
+﻿{
+  "Providers": [
+    {
+      "MaxConcurrency": 2,
+      "ProviderName": "DHL",
+      "ProviderURL": "http://dhl.com"
+    }
+  ]
+}

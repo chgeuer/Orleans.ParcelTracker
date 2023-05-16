@@ -6,42 +6,35 @@ using Orleans;
 using Orleans.Runtime;
 using System.Threading.Tasks;
 
-
-
 public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrain
 {
     public IGrainContext GrainContext { get; init; }
     private readonly ILogger<IProviderConfigurationGrain> logger;
     private readonly IClusterClient clusterClient;
-    private ProviderConfiguration? state;
+    private ProviderConfiguration? providerConfiguration;
 
     public ProviderConfigurationGrain(
         IGrainContext grainContext,
         ILogger<IProviderConfigurationGrain> logger,
         IClusterClient clusterClient)
     {
-        logger.LogDebug("{GrainType}({State})", nameof(ProviderConfigurationGrain), state);
+        logger.LogDebug("{GrainType}()", nameof(ProviderConfigurationGrain));
 
         (GrainContext, this.logger, this.clusterClient) = (grainContext, logger, clusterClient);
     }
 
-    Task<ProviderConfiguration?> IProviderConfigurationGrain.GetConfiguration()
-    {
-        return Task.FromResult(state);
-    }
-
-    async Task IProviderConfigurationGrain.Initialize(ProviderConfiguration providerConfiguration)
+    async Task IProviderConfigurationGrain.Initialize(ProviderConfiguration configuration)
     {
         logger.LogDebug("{GrainId} {MethodName} \"{ProviderName}\"",
-           GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize), providerConfiguration.ProviderName);
+           GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize), configuration.ProviderName);
 
-        state = providerConfiguration;
+        providerConfiguration = configuration;
 
         (int Id, Task Task) initialize(int primaryKey)
         {
             var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
                     primaryKey: primaryKey,
-                    keyExtension: providerConfiguration.ProviderName);
+                    keyExtension: configuration.ProviderName);
 
             logger.LogDebug("Instantiate {Provider}-{Id}", providerConfiguration.ProviderName, primaryKey);
 
@@ -50,7 +43,7 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
         // Kick off the API caller grains...
         var initializers = Enumerable
-            .Range(0, providerConfiguration.MaxConcurrency)
+            .Range(0, configuration.MaxConcurrency)
             .Select(initialize)
             .ToArray();
 
@@ -58,6 +51,12 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
         logger.LogInformation("{GrainId} {MethodName} Initialized {Provider} with {InstanceCount} instances",
             GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize),
-            providerConfiguration.ProviderName, initializers.Length);
+            configuration.ProviderName, initializers.Length);
     }
+
+    Task<ProviderConfiguration?> IProviderConfigurationGrain.GetConfiguration()
+    {
+        return Task.FromResult(providerConfiguration);
+    }
+
 }

@@ -2,6 +2,6 @@
 
 [GenerateSerializer]
 public record ProviderConfiguration(
-    int MaxConcurrency,
     string ProviderName,
+    int MaxConcurrency,
     string ProviderURL);

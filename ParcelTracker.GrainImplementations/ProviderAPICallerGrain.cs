@@ -13,6 +13,7 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
     public IGrainContext GrainContext { get; init; }
     private readonly ILogger<IProviderAPICallerGrain> logger;
     private readonly IClusterClient clusterClient;
+    private readonly IPrioritizedQueueGrain<Job<string>> queueClient;
     private ProviderConfiguration? providerConfiguration;
 
     public ProviderAPICallerGrain(
@@ -22,6 +23,8 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
     {
         (GrainContext, this.logger, this.clusterClient) = (context, logger, clusterClient);
 
+        queueClient = clusterClient.GetGrain<IPrioritizedQueueGrain<Job<string>>>(grainId: context.GrainId);
+
         this.RegisterOrUpdateReminder(
             reminderName: "reminder123",
             dueTime: TimeSpan.FromSeconds(3),
@@ -30,7 +33,7 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
 
     Task IGrainBase.OnActivateAsync(CancellationToken cancellationToken)
     {
-        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" state",
+        logger.LogInformation("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" state",
             GrainContext.GrainId,
             nameof(IGrainBase.OnActivateAsync),
             this.GetPrimaryKeyString(),

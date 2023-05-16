@@ -20,6 +20,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParcelTracker.Names", "ParcelTracker.Names\ParcelTracker.Names.csproj", "{4310FDE9-8CC8-48B5-B7BD-1E967F220085}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4310FDE9-8CC8-48B5-B7BD-1E967F220085}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4310FDE9-8CC8-48B5-B7BD-1E967F220085}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4310FDE9-8CC8-48B5-B7BD-1E967F220085}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4310FDE9-8CC8-48B5-B7BD-1E967F220085}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -55,6 +61,7 @@ Global
 		{95B90124-768E-4A69-BEAB-679A2506CA20} = {1290BA87-DCDA-4310-A859-D44528EEE036}
 		{5E9B4627-4823-4B0B-83BF-0AAF9EB2EA63} = {1290BA87-DCDA-4310-A859-D44528EEE036}
 		{7D0A0F5F-FCCB-47AB-B7D5-1CBA6A68E749} = {1290BA87-DCDA-4310-A859-D44528EEE036}
+		{4310FDE9-8CC8-48B5-B7BD-1E967F220085} = {1290BA87-DCDA-4310-A859-D44528EEE036}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D15C0E62-0679-4B13-834C-B67E5026F600}
