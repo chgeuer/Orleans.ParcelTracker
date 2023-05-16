@@ -1,13 +1,5 @@
 ﻿namespace ParcelTracker.GrainImplementations;
 
-using GrainInterfaces;
-using Microsoft.Extensions.Logging;
-using Orleans;
-using Orleans.Runtime;
-using ParcelTracker.GrainImplementations.ServiceImplementations;
-using System.Threading;
-using System.Threading.Tasks;
-
 [KeepAlive]
 public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemindable
 {
@@ -19,6 +11,10 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
     private bool initialized = false;
     ITrackingClient? trackingClient = null;
 
+    private Task? _backgroundTask;
+    private readonly CancellationTokenSource cts;
+    private readonly CancellationToken cancellationToken;
+
     public ProviderAPICallerGrain(
         IGrainContext context,
         ILogger<IProviderAPICallerGrain> logger,
@@ -28,35 +24,52 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
 
         queueClient = clusterClient.GetGrain<IPrioritizedQueueGrain<Job<string>>>(grainId: context.GrainId);
 
-        this.RegisterOrUpdateReminder(
-            reminderName: "reminder123",
-            dueTime: TimeSpan.FromSeconds(3),
-            period: TimeSpan.FromSeconds(61));
+        cts = new CancellationTokenSource();
+        cancellationToken = cts.Token;
+
+        //this.RegisterOrUpdateReminder(
+        //    reminderName: "reminder123",
+        //    dueTime: TimeSpan.FromSeconds(3),
+        //    period: TimeSpan.FromSeconds(61));
     }
 
     Task IGrainBase.OnActivateAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" state",
-            GrainContext.GrainId,
-            nameof(IGrainBase.OnActivateAsync),
-            this.GetPrimaryKeyString(),
-            this.GetPrimaryKeyLong());
+            GrainContext.GrainId, nameof(IGrainBase.OnActivateAsync), this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
+
+        _backgroundTask = Loop();
 
         return Task.CompletedTask;
     }
 
-    Task IGrainBase.OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    private async Task Loop()
     {
-        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\"",
-            GrainContext.GrainId, nameof(IGrainBase.OnDeactivateAsync),
-            this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
+        await Task.Yield();
 
-        return Task.CompletedTask;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            logger.LogInformation("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" Looooping",
+                GrainContext.GrainId, nameof(Loop), this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
+        }
+    }
+
+    async Task IGrainBase.OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\"", GrainContext.GrainId, nameof(IGrainBase.OnDeactivateAsync), this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
+
+        cts.Cancel();
+        if (_backgroundTask != null)
+        {
+            await _backgroundTask;
+        }
     }
 
     Task IProviderAPICallerGrain.Initialize(ProviderConfiguration providerConfiguration)
     {
-        if (initialized) {
+        if (initialized)
+        {
             logger.LogWarning("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" called twice (already initialized).",
                 GrainContext.GrainId, nameof(IProviderAPICallerGrain.Initialize),
                 this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
@@ -89,29 +102,24 @@ public class ProviderAPICallerGrain : IGrainBase, IProviderAPICallerGrain, IRemi
         return Task.CompletedTask;
     }
 
-    private Task Timer(object o)
-    {
-        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" Object {object}",
-            GrainContext.GrainId, nameof(this.Timer),
-            this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), o);
-
-        return Task.CompletedTask;
-    }
+    //private Task Timer(object o)
+    //{
+    //    logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" Object {object}",
+    //        GrainContext.GrainId, nameof(this.Timer),
+    //        this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), o);
+    //    return Task.CompletedTask;
+    //}
 
     Task IRemindable.ReceiveReminder(string reminderName, TickStatus status)
     {
-        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" ReminderName {reminderName} TickStatus {TickStatus}",
-            GrainContext.GrainId, nameof(IRemindable.ReceiveReminder),
-            this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), reminderName, status);
+        logger.LogDebug("{GrainId} {MethodName} \"{Provider}\" Number \"{Number}\" ReminderName {reminderName} TickStatus {TickStatus}", GrainContext.GrainId, nameof(IRemindable.ReceiveReminder), this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), reminderName, status);
 
         return Task.CompletedTask;
     }
 
-    async Task IProviderAPICallerGrain.Deactivate(int newMaxConcurrency)
+    async Task IProviderAPICallerGrain.Deactivate()
     {
-        logger.LogInformation("{GrainId} {MethodName}: Shutting down {Provider}/{Number} due to new maximum concurrency {MaxConcurrency}",
-            GrainContext.GrainId, nameof(IProviderAPICallerGrain.Deactivate),
-            this.GetPrimaryKeyString(), this.GetPrimaryKeyLong(), newMaxConcurrency);
+        logger.LogWarning("{GrainId} {MethodName}: Shutting down {Provider}/{Number} due to new maximum concurrency", GrainContext.GrainId, nameof(IProviderAPICallerGrain.Deactivate), this.GetPrimaryKeyString(), this.GetPrimaryKeyLong());
 
         await GrainContext.DeactivateAsync(new(DeactivationReasonCode.ApplicationRequested, "Scale-down requested"));
     }
