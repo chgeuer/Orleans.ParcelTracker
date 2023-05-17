@@ -24,17 +24,15 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
         if (configuration == null)
         {
-            configuration = newConfiguration;
-
             (int Id, Task Task) initialize(int primaryKey)
             {
                 var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
                         primaryKey: primaryKey,
                         keyExtension: newConfiguration.ProviderName);
 
-                logger.LogDebug("Instantiate {Provider}-{Id}", configuration.ProviderName, primaryKey);
+                logger.LogDebug("Instantiate {Provider}-{Id}", newConfiguration.ProviderName, primaryKey);
 
-                return (primaryKey, client.Initialize(configuration));
+                return (primaryKey, client.Initialize(newConfiguration));
             }
 
             // Kick off the API caller grains...
@@ -48,28 +46,40 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
             logger.LogInformation("{GrainId} {MethodName} Initialized {Provider} with {InstanceCount} instances",
                 GrainContext.GrainId, nameof(IProviderConfigurationGrain.Initialize),
                 newConfiguration.ProviderName, initializers.Length);
+
+            configuration = newConfiguration;
         }
         else
         {
             // The ProviderConfigurationGrain is initialized a 2nd time, potentially with a different configuration.
             // If we're running too many API workers, need to de-activate some.
             //
-            var max = Math.Max(newConfiguration.MaxConcurrency, configuration.MaxConcurrency);
+            var oldConcurrency = configuration.MaxConcurrency;
+            var newConcurrency = newConfiguration.MaxConcurrency;
+            var max = Math.Max(oldConcurrency, newConcurrency);
+
             foreach (var instanceNumber in Enumerable.Range(0, count: max))
             {
-                var client = clusterClient.GetGrain<IProviderAPICallerGrain>(
+                var apiCallerGrain = clusterClient.GetGrain<IProviderAPICallerGrain>(
                     primaryKey: instanceNumber, keyExtension: newConfiguration.ProviderName);
 
                 if (instanceNumber < newConfiguration.MaxConcurrency)
                 {
                     // This one is certainly already running, will re-initialize.
-                    await client.Initialize(newConfiguration);
+                    await apiCallerGrain.Initialize(newConfiguration);
                 }
                 else
                 {
-                    // newConfiguration.MaxConcurrency >= current Configuration's MaxConcurrency
-                    await client.Deactivate();
+                    var primaryKey = apiCallerGrain.GetPrimaryKeyString();
+                    var gid = GrainContext.GrainId;
+                    // newConfiguration.MaxConcurrency <= oldConfig.MaxConcurrency
+                    logger.LogDebug("{GrainId} {MethodName} \"{ProviderName}\". Deactivating {WorkerGrainID}",
+                       gid, nameof(IProviderConfigurationGrain.Initialize), newConfiguration.ProviderName, primaryKey);
+
+                    await apiCallerGrain.ShutdownWorker();
                 }
+
+                configuration = newConfiguration;
             }
         }
     }

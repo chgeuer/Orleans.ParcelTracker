@@ -2,9 +2,17 @@
 
 public interface IProviderBootstrapGrain : IGrainWithStringKey
 {
-    Task AddAndActivateProvider(ProviderConfiguration providerConfiguration);
+    Task SetProvider(ProviderConfiguration providerConfiguration);
+
+    Task<ProviderConfiguration> GetConfiguration(string providerName);
 
     Task ActivateAllProviders();
 
     Task<IEnumerable<string>> GetProviders();
+}
+
+public static class IProviderBootstrapGrainExtensions
+{
+    public static IProviderBootstrapGrain CreateProviderBootstrapGrainClient(this IClusterClient clusterClient)
+        => clusterClient.GetGrain<IProviderBootstrapGrain>(primaryKey: "bootstrapSingleton");
 }

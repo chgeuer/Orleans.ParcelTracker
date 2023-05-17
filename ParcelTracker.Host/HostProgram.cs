@@ -8,7 +8,6 @@ using Newtonsoft.Json;
 using GrainInterfaces;
 using System;
 using System.Threading.Tasks;
-using ParcelTracker.GrainImplementations.ServiceImplementations;
 
 internal class OrleansGrainStorageSettings
 {
@@ -48,8 +47,7 @@ internal class HostProgram
         await clientHost.StartAsync();
 
         var clusterClient = clientHost.Services.GetRequiredService<IClusterClient>();
-
-        var providerBootstrap = clusterClient.GetGrain<IProviderBootstrapGrain>(primaryKey: "bootstrapSingleton");
+        var providerBootstrap = clusterClient.CreateProviderBootstrapGrainClient();
         await providerBootstrap.ActivateAllProviders();
 
         if (loadInitialConfiguration)
@@ -57,9 +55,9 @@ internal class HostProgram
             var cfg = await LoadFromLocalConfig();
             if (cfg != default)
             {
-                foreach (var (_, provider) in cfg.Providers)
+                foreach (var (_providerName, providerConfig) in cfg.Providers)
                 {
-                    await providerBootstrap.AddAndActivateProvider(provider);
+                    await providerBootstrap.SetProvider(providerConfig);
                 }
             }
         }

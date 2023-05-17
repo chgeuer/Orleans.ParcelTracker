@@ -160,13 +160,12 @@ internal class Program
                 else if (segments.Length == 2 && segments[0] == "inc")
                 {
                     var provider = segments[1];
-
-                    var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: provider);
-                    var oldCfg = await configGrain.GetConfiguration();
+                    var configGrain = clusterClient.CreateProviderBootstrapGrainClient();
+                    var oldCfg = await configGrain.GetConfiguration(provider);
                     if (oldCfg != null)
                     {
                         var newConcurrency = oldCfg.MaxConcurrency + 1;
-                        await configGrain.Initialize(oldCfg with { MaxConcurrency = newConcurrency });
+                        await configGrain.SetProvider(oldCfg with { MaxConcurrency = newConcurrency });
                         await Console.Out.WriteLineAsync($"Set concurrency for {provider} to {newConcurrency}");
                     }
                 }
@@ -174,12 +173,12 @@ internal class Program
                 {
                     var provider = segments[1];
 
-                    var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: provider);
-                    var oldCfg = await configGrain.GetConfiguration();
+                    var configGrain = clusterClient.CreateProviderBootstrapGrainClient();
+                    var oldCfg = await configGrain.GetConfiguration(provider);
                     if (oldCfg != null)
                     {
                         var newConcurrency = Math.Max(oldCfg.MaxConcurrency - 1, 1);
-                        await configGrain.Initialize(oldCfg with { MaxConcurrency = newConcurrency });
+                        await configGrain.SetProvider(oldCfg with { MaxConcurrency = newConcurrency });
                         await Console.Out.WriteLineAsync($"Set concurrency for {provider} to {newConcurrency}");
                     }
                 }

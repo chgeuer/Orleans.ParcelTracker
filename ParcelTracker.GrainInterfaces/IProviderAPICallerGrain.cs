@@ -8,5 +8,5 @@ public interface IProviderAPICallerGrain : IGrainWithIntegerCompoundKey
     /// Called when scale-down is needed.
     /// </summary>
     /// <returns></returns>
-    Task Deactivate();
+    Task ShutdownWorker();
 }
