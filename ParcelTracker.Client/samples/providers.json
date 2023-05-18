@@ -1,11 +1,11 @@
 [
   {
-    "Name": "ProviderC",
+    "Name": "DHL",
     "URL": "http://www.provider1.com",
     "ConcurrentExecutions": 2
   },
   {
-    "Name": "ProviderD",
+    "Name": "Fabrikam",
     "URL": "http://www.provider2.com",
     "ConcurrentExecutions": 4
   }

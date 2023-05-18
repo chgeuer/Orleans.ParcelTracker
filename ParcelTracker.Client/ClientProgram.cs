@@ -103,30 +103,54 @@ internal class ClientProgram
                 else if (segments.Length == 3 && segments[0] == "load" && segments[1] == "providers")
                 {
                     // load the provider configuration from the json file provided in segments[2]
-                    string providers = await ReadFileAsync(segments[2]);
+                    // add try and catch for any issue with the file
+                    string providers = default!;
+                    try
+                    {
+                        providers = await ReadFileAsync(segments[2]);
+                    }catch(Exception ex)
+                    {
+                        Console.WriteLine($"Error reading file {segments[2]}: {ex.Message}");
+                        continue;
+                    }
+                    
                     ProviderConfig[]? list = JsonSerializer.Deserialize<ProviderConfig[]>(providers);
                     if (list == null || list.Length == 0)
                     {
                         Console.WriteLine("No providers found in the configuration file");
                         continue;
                     }
-                    Console.WriteLine($"{list.Length} providers found in the configuration file, creating grains");
-                    foreach (var _provider in list!)
+                    Console.WriteLine($"{list.Length} providers found in the configuration file, creating grains..");
+                    try{
+                        foreach (var _provider in list!)
+                        {
+                            var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: _provider.Name);
+                            await configGrain.Initialize(new(
+                                MaxConcurrency: _provider.ConcurrentExecutions,
+                                ProviderName: _provider.Name ?? ProviderConfig.DefaultProviderName,
+                                ProviderURL: _provider.URL ?? ProviderConfig.DefaultProviderURL));
+                            Console.WriteLine($" \t Provider {_provider.Name} created.");
+                        }
+                        Console.WriteLine($"{list.Length} Providers created successfully!");
+                        continue;
+                    }catch (Exception ex)
                     {
-
-                        var configGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(primaryKey: _provider.Name);
-                        await configGrain.Initialize(new(
-                            MaxConcurrency: _provider.ConcurrentExecutions,
-                            ProviderName: _provider.Name ?? ProviderConfig.DefaultProviderName,
-                            ProviderURL: _provider.URL ?? ProviderConfig.DefaultProviderURL));
+                        Console.WriteLine($"Error creating grains: {ex.Message}");
+                        continue;
                     }
-                    continue;
-
                 }
                 else if (segments.Length == 3 && segments[0] == "load" && segments[1] == "jobs")
                 {
-                    // load the jobs from the json file provided in segments[2]
-                    string jobs = await ReadFileAsync(segments[2]);
+                    // load the jobs from the json file provided in segments[2]                    
+                    string jobs = default!;
+                    try
+                    {
+                        jobs = await ReadFileAsync(segments[2]);
+                    }catch(Exception ex)
+                    {
+                        Console.WriteLine($"Error reading file {segments[2]}: {ex.Message}");
+                        continue;
+                    }                    
                     TaRs? list = JsonSerializer.Deserialize<TaRs>(jobs);
                     if (list == null || list.tars == null || list.tars.Count == 0)
                     {
@@ -134,13 +158,21 @@ internal class ClientProgram
                         continue;
                     }
                     Console.WriteLine($"{list.tars.Count} jobs found for {list.ProviderName} provider in the configuration file, adding to the queue");
-                    foreach (var tar in list.tars)
+                    try{
+                        foreach (var tar in list.tars)
+                        {
+                            var prioritizedQueue = getClient(list.ProviderName ?? ProviderConfig.DefaultProviderName);
+                            var job = new Job<string>(tar.Priority, tar.Description ?? TaR.DefaultTaRDescription);
+                            await prioritizedQueue.AddJob(job);
+                        }
+                        Console.WriteLine($"{list.tars.Count} jobs added successfully!");
+                        continue;
+                    }catch (Exception ex)
                     {
-                        var prioritizedQueue = getClient(list.ProviderName ?? ProviderConfig.DefaultProviderName);
-                        var job = new Job<string>(tar.Priority, tar.Description ?? TaR.DefaultTaRDescription);
-                        await prioritizedQueue.AddJob(job);
+                        Console.WriteLine($"Error adding jobs to the queue: {ex.Message}");
+                        continue;
                     }
-                    continue;
+                    
                 }
                 else if (segments.Length == 2 && segments[0] == "get")
                 {
