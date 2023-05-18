@@ -1,4 +1,6 @@
-﻿namespace ParcelTracker.GrainImplementations;
+﻿using Microsoft.Extensions.Configuration;
+
+namespace ParcelTracker.GrainImplementations;
 
 public class IProviderBootstrap : IGrainBase, IProviderBootstrapGrain
 {
@@ -31,8 +33,20 @@ public class IProviderBootstrap : IGrainBase, IProviderBootstrapGrain
 
         state.State[configuration.ProviderName] = configuration;
         await state.WriteStateAsync();
-
         await InitializeProviderGrain(configuration);
+    }
+
+    async Task IProviderBootstrapGrain.SetConcurrency(string providerName, int newConcurrency)
+    {
+        if (state.State.ContainsKey(providerName))
+        {
+            var providerConfigurationGrain = clusterClient.GetGrain<IProviderConfigurationGrain>(providerName);
+            state.State[providerName] = state.State[providerName] with { MaxConcurrency = newConcurrency };
+
+            await Task.WhenAll(
+                state.WriteStateAsync(),
+                providerConfigurationGrain.SetConcurrency(newConcurrency));
+        }
     }
 
     Task<ProviderConfiguration> IProviderBootstrapGrain.GetConfiguration(string providerName)

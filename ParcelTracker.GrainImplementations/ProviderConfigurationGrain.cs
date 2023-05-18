@@ -32,7 +32,7 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
 
                 logger.LogDebug("Instantiate {Provider}-{Id}", newConfiguration.ProviderName, primaryKey);
 
-                return (primaryKey, client.Initialize(newConfiguration));
+                return (primaryKey, client.Start(newConfiguration));
             }
 
             // Kick off the API caller grains...
@@ -66,7 +66,7 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
                 if (instanceNumber < newConfiguration.MaxConcurrency)
                 {
                     // This one is certainly already running, will re-initialize.
-                    await apiCallerGrain.Initialize(newConfiguration);
+                    await apiCallerGrain.Start(newConfiguration);
                 }
                 else
                 {
@@ -76,11 +76,47 @@ public class ProviderConfigurationGrain : IGrainBase, IProviderConfigurationGrai
                     logger.LogDebug("{GrainId} {MethodName} \"{ProviderName}\". Deactivating {WorkerGrainID}",
                        gid, nameof(IProviderConfigurationGrain.Initialize), newConfiguration.ProviderName, primaryKey);
 
-                    await apiCallerGrain.ShutdownWorker();
+                    await apiCallerGrain.Stop();
                 }
 
                 configuration = newConfiguration;
             }
+        }
+    }
+
+    async Task IProviderConfigurationGrain.SetConcurrency(int newConcurrency)
+    {
+        if (configuration == null)
+        {
+            var errorMessage = $"Must call {nameof(IProviderConfigurationGrain.Initialize)} prior {nameof(IProviderConfigurationGrain.SetConcurrency)}";
+
+            logger.LogCritical("{GrainId} {MethodName}: {ErrorMessage}",
+                GrainContext.GrainId, nameof(IProviderConfigurationGrain.SetConcurrency), errorMessage);
+
+            throw new NotSupportedException(errorMessage);
+        }
+        var oldConcurrency = configuration.MaxConcurrency;
+        configuration = configuration with { MaxConcurrency = newConcurrency };
+
+        if (oldConcurrency < newConcurrency)
+        {
+            for (var i = oldConcurrency; i < newConcurrency; i++)
+            {
+                var apiCallerGrain = clusterClient.GetGrain<IProviderAPICallerGrain>(primaryKey: i, keyExtension: configuration.ProviderName);
+                await apiCallerGrain.Start(configuration);
+            }
+        }
+        else if (newConcurrency < oldConcurrency)
+        {
+            for (var i = newConcurrency; i < oldConcurrency; i++)
+            {
+                var apiCallerGrain = clusterClient.GetGrain<IProviderAPICallerGrain>(primaryKey: i, keyExtension: configuration.ProviderName);
+                await apiCallerGrain.Stop();
+            }
+        }
+        else
+        {
+            // oldConcurrency == newConcurrency -> no change
         }
     }
 

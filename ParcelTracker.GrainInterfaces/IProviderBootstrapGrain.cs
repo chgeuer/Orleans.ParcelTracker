@@ -4,6 +4,8 @@ public interface IProviderBootstrapGrain : IGrainWithStringKey
 {
     Task SetProvider(ProviderConfiguration providerConfiguration);
 
+    Task SetConcurrency(string providerName, int concurrency);
+
     Task<ProviderConfiguration> GetConfiguration(string providerName);
 
     Task ActivateAllProviders();

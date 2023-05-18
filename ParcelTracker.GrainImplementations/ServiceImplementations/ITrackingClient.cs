@@ -2,7 +2,7 @@
 
 public interface ITrackingClient
 {
-    Task<string> FetchStatus(ProviderConfiguration configuration, string parcelNumber);
+    Task<ParcelTrackingResponse<string>> FetchStatus(ProviderConfiguration configuration, Job<string> trackingJob);
 
     private static IEnumerable<(string Name, ITrackingClient Client)> GetTrackingClients(Assembly? assembly = null)
     {

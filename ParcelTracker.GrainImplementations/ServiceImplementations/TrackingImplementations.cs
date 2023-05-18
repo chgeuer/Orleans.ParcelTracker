@@ -18,14 +18,14 @@ internal abstract class TrackingClientBase : ITrackingClient
     internal abstract int StartOperation();
     internal abstract void EndOperation();
 
-    async Task<string> ITrackingClient.FetchStatus(ProviderConfiguration configuration, string parcelNumber)
+    async Task<ParcelTrackingResponse<string>> ITrackingClient.FetchStatus(ProviderConfiguration configuration, Job<string> trackingJob)
     {
         var requestsInFlight = StartOperation();
         try
         {
             await Task.Delay(TimeSpan.FromMilliseconds(Rnd.Next(minValue: LatencyMilliSeconds.Low, maxValue: LatencyMilliSeconds.High)));
 
-            return $"{ProviderName}: Tracking {configuration.ProviderName} for {parcelNumber} ({requestsInFlight} concurrent requests in flight).";
+            return new ParcelTrackingResponse<string>(Response: $"{ProviderName}: Tracking {configuration.ProviderName} for {trackingJob.JobDescription} ({requestsInFlight} concurrent requests in flight).");
         }
         finally
         {
@@ -34,15 +34,22 @@ internal abstract class TrackingClientBase : ITrackingClient
     }
 }
 
+[TrackingClient("Yoav-Parcels")]
+public class YoavParcelnclient : ITrackingClient
+{
+    Task<ParcelTrackingResponse<string>> ITrackingClient.FetchStatus(ProviderConfiguration configuration, Job<string> trackingJob)
+        => throw new NotImplementedException();
+}
+
 [TrackingClient("Contoso")]
 internal class ContosoSlowShipping : TrackingClientBase
 {
     internal override (int Low, int High) LatencyMilliSeconds => Speed.Slooow;
     internal override string ProviderName => nameof(ContosoSlowShipping);
 
-    private static int RequestsInFlight = 0;
-    internal override int StartOperation() => Interlocked.Increment(ref RequestsInFlight);
-    internal override void EndOperation() => Interlocked.Decrement(ref RequestsInFlight);
+    private static int ContosoRequestsInFlight = 0;
+    internal override int StartOperation() => Interlocked.Increment(ref ContosoRequestsInFlight);
+    internal override void EndOperation() => Interlocked.Decrement(ref ContosoRequestsInFlight);
 }
 
 [TrackingClient("Fabrikam")]
@@ -51,18 +58,18 @@ internal class FabrikamShipping : TrackingClientBase
     internal override (int Low, int High) LatencyMilliSeconds => Speed.Slooow;
     internal override string ProviderName => nameof(FabrikamShipping);
 
-    private static int RequestsInFlight = 0;
-    internal override int StartOperation() => Interlocked.Increment(ref RequestsInFlight);
-    internal override void EndOperation() => Interlocked.Decrement(ref RequestsInFlight);
+    private static int FabrikamRequestsInFlight = 0;
+    internal override int StartOperation() => Interlocked.Increment(ref FabrikamRequestsInFlight);
+    internal override void EndOperation() => Interlocked.Decrement(ref FabrikamRequestsInFlight);
 }
 
 [TrackingClient("DHL")]
 internal class TheDhlShippingImplementation : TrackingClientBase
 {
-    internal override (int Low, int High) LatencyMilliSeconds => Speed.Slooow;
+    internal override (int Low, int High) LatencyMilliSeconds => Speed.Fast;
     internal override string ProviderName => nameof(TheDhlShippingImplementation);
 
-    private static int RequestsInFlight = 0;
-    internal override int StartOperation() => Interlocked.Increment(ref RequestsInFlight);
-    internal override void EndOperation() => Interlocked.Decrement(ref RequestsInFlight);
+    private static int DHLRequestsInFlight = 0;
+    internal override int StartOperation() => Interlocked.Increment(ref DHLRequestsInFlight);
+    internal override void EndOperation() => Interlocked.Decrement(ref DHLRequestsInFlight);
 }

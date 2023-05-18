@@ -4,7 +4,9 @@
       "ProviderName": "DHL",
       "MaxConcurrency": 1,
       "ProviderURL": "http://dhl.com"
-    },
+    }
+  },
+  "unused": {
     "Contoso": {
       "ProviderName": "Contoso",
       "MaxConcurrency": 1,
