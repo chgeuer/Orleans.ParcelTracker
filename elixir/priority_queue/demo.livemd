@@ -8,7 +8,7 @@ Mix.install([
 
 ## The `PriorityQueue` data structure
 
-The `PriorityQueue` module represents the pure functional data structure. This is for **Philipp**.
+The `PriorityQueue` module represents the pure functional data structure. It uses the [`:treex`](https://hexdocs.pm/treex/api-reference.html) module to have a better UX interacting with Erlang's `gb_trees` data structure.
 
 ```elixir
 defmodule PriorityQueue do

@@ -1,0 +1,3 @@
+%{
+  "treex": {:hex, :treex, "0.1.0", "d3cf28651d84e5c5535f90748fa13b4fe334860f62a79f2edcb2410bbbec7da7", [:mix], [], "hexpm", "4749226e0c970f1ec840da8dee78b20f4dd2f104c466256330cd652c0a08f5f5"},
+}
