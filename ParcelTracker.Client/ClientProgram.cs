@@ -4,6 +4,7 @@ using GrainInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 internal class ClientProgram
@@ -113,7 +114,7 @@ internal class ClientProgram
                         Console.WriteLine($"Error reading file {segments[2]}: {ex.Message}");
                         continue;
                     }
-                    
+
                     ProviderConfig[]? list = JsonSerializer.Deserialize<ProviderConfig[]>(providers);
                     if (list == null || list.Length == 0)
                     {
@@ -141,7 +142,7 @@ internal class ClientProgram
                 }
                 else if (segments.Length == 3 && segments[0] == "load" && segments[1] == "jobs")
                 {
-                    // load the jobs from the json file provided in segments[2]                    
+                    // load the jobs from the json file provided in segments[2]
                     string jobs = default!;
                     try
                     {
@@ -150,7 +151,7 @@ internal class ClientProgram
                     {
                         Console.WriteLine($"Error reading file {segments[2]}: {ex.Message}");
                         continue;
-                    }                    
+                    }
                     TaRs? list = JsonSerializer.Deserialize<TaRs>(jobs);
                     if (list == null || list.tars == null || list.tars.Count == 0)
                     {
@@ -172,7 +173,7 @@ internal class ClientProgram
                         Console.WriteLine($"Error adding jobs to the queue: {ex.Message}");
                         continue;
                     }
-                    
+
                 }
                 else if (segments.Length == 2 && segments[0] == "get")
                 {
