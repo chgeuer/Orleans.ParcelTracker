@@ -45,14 +45,19 @@ defmodule PriorityQueue do
       ...>     |> PriorityQueue.push(1, "Higher prio")
       ...>     |> PriorityQueue.push(3, :very_low_prio)
       ...>     |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
-      iex> { { :value, prio, value }, queue } = queue |> PriorityQueue.pop(); { prio, value }
-      { 1, "Higher prio" }
-      iex> { { :value, prio, value }, queue } = queue |> PriorityQueue.pop(); { prio, value }
-      { 2, "Lower prio" }
-      iex> { { :value, prio, value }, queue } = queue |> PriorityQueue.pop(); { prio, value }
-      { 2, { :job, "Some other thing in 2" } }
-      iex> { { :value, prio, value }, _queue } = queue |> PriorityQueue.pop(); { prio, value }
-      { 3, :very_low_prio }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 1, "Higher prio" }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, "Lower prio" }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, { :job, "Some other thing in 2" } }
+      iex> { result, _queue } = queue |> PriorityQueue.pop(); result
+      { :value, 3, :very_low_prio }
+
+      iex> { result, _queue } = PriorityQueue.new()
+      ...> |> PriorityQueue.pop()
+      iex> result
+      :none
   """
   def pop(pq = %__MODULE__{size: 0}), do: {:none, pq}
   def pop(%__MODULE__{size: n, treex: tree}) do
