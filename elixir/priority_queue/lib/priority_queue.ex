@@ -4,7 +4,8 @@ defmodule PriorityQueue do
   def new, do: %__MODULE__{size: 0, treex: Treex.empty()}
 
   # def empty?(%__MODULE__{treex: tree}), do: tree |> Treex.empty?()
-  def empty?(%__MODULE__{size: n}), do: n == 0
+  def empty?(%__MODULE__{size: 0}), do: true
+  def empty?(%__MODULE__{}), do: false
   def empty?(_), do: false
 
   @doc ~S"""
