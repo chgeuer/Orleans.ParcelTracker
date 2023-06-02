@@ -34,7 +34,6 @@ defmodule PriorityQueue do
     %{pq | size: n + 1, treex: tree}
   end
 
-
   @doc ~S"""
   Returns the pairs of a `PriorityQueue
 
@@ -60,6 +59,7 @@ defmodule PriorityQueue do
       :none
   """
   def pop(pq = %__MODULE__{size: 0}), do: {:none, pq}
+
   def pop(%__MODULE__{size: n, treex: tree}) do
     {priority, queue, tree} = tree |> Treex.take_smallest!()
     {{:value, value}, queue} = :queue.out(queue)
