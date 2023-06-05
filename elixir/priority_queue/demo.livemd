@@ -14,13 +14,29 @@ The `PriorityQueue` module represents the pure functional data structure. It use
 defmodule PriorityQueue do
   defstruct size: 0, treex: nil
 
+  def new, do: %__MODULE__{size: 0, treex: Treex.empty()}
+
   # def empty?(%__MODULE__{treex: tree}), do: tree |> Treex.empty?()
-  def empty?(%__MODULE__{size: n}), do: n == 0
+  def empty?(%__MODULE__{size: 0}), do: true
+  def empty?(%__MODULE__{}), do: false
   def empty?(_), do: false
 
-  def size(%__MODULE__{size: n}), do: n
+  @doc ~S"""
+  Returns the size of a `PriorityQueue
 
-  def new, do: %__MODULE__{size: 0, treex: Treex.empty()}
+  ## Examples
+
+      iex> PriorityQueue.new()
+      ...>   |> PriorityQueue.size()
+      0
+
+      iex> PriorityQueue.new()
+      ...>   |> PriorityQueue.push(1, "Some item")
+      ...>   |> PriorityQueue.size()
+      1
+
+  """
+  def size(%__MODULE__{size: n}), do: n
 
   def push(pq = %__MODULE__{size: n, treex: tree}, priority, value) when is_integer(priority) do
     tree =
@@ -32,6 +48,30 @@ defmodule PriorityQueue do
     %{pq | size: n + 1, treex: tree}
   end
 
+  @doc ~S"""
+  Returns the pairs of a `PriorityQueue
+
+  ## Examples
+
+      iex> queue = PriorityQueue.new()
+      ...>     |> PriorityQueue.push(2, "Lower prio")
+      ...>     |> PriorityQueue.push(1, "Higher prio")
+      ...>     |> PriorityQueue.push(3, :very_low_prio)
+      ...>     |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 1, "Higher prio" }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, "Lower prio" }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, { :job, "Some other thing in 2" } }
+      iex> { result, _queue } = queue |> PriorityQueue.pop(); result
+      { :value, 3, :very_low_prio }
+
+      iex> { result, _queue } = PriorityQueue.new()
+      ...> |> PriorityQueue.pop()
+      iex> result
+      :none
+  """
   def pop(pq = %__MODULE__{size: 0}), do: {:none, pq}
 
   def pop(%__MODULE__{size: n, treex: tree}) do
@@ -47,6 +87,19 @@ defmodule PriorityQueue do
     {{:value, priority, value}, %__MODULE__{size: n - 1, treex: tree}}
   end
 
+  @doc ~S"""
+  Returns the keys of a `PriorityQueue
+
+  ## Examples
+
+      iex> PriorityQueue.new()
+      ...> |> PriorityQueue.push(2, "Lower prio")
+      ...> |> PriorityQueue.push(1, "Higher prio")
+      ...> |> PriorityQueue.keys()
+
+      [ 1, 2 ]
+
+  """
   def keys(%__MODULE__{treex: tree}), do: tree |> Treex.keys()
 
   defp values(pq = %__MODULE__{}, list) do
@@ -56,6 +109,19 @@ defmodule PriorityQueue do
     end
   end
 
+  @doc ~S"""
+  Returns the values of a `PriorityQueue
+
+  ## Examples
+
+      iex> PriorityQueue.new()
+      ...> |> PriorityQueue.push(2, "Lower prio")
+      ...> |> PriorityQueue.push(1, "Higher prio")
+      ...> |> PriorityQueue.values()
+
+      [ "Higher prio", "Lower prio" ]
+
+  """
   def values(pq = %__MODULE__{}) do
     values(pq, [])
   end
@@ -67,6 +133,44 @@ defmodule PriorityQueue do
     end
   end
 
+  @doc ~S"""
+  Returns the pairs of a `PriorityQueue
+
+  ## Examples
+
+      iex> PriorityQueue.new()
+      ...> |> PriorityQueue.push(2, "Lower prio")
+      ...> |> PriorityQueue.push(1, "Higher prio")
+      ...> |> PriorityQueue.push(3, :very_low_prio)
+      ...> |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
+      ...> |> PriorityQueue.pairs()
+
+      [
+        { 1, "Higher prio" },
+        { 2, "Lower prio" },
+        { 2, { :job, "Some other thing in 2" } },
+        { 3, :very_low_prio }
+      ]
+
+      iex> PriorityQueue.new()
+      ...> |> PriorityQueue.push(100, 9)
+      ...> |> PriorityQueue.push(1, 1)
+      ...> |> PriorityQueue.push(2, 5)
+      ...> |> PriorityQueue.push(1, 2)
+      ...> |> PriorityQueue.push(2, 6)
+      ...> |> PriorityQueue.push(1, 3)
+      ...> |> PriorityQueue.push(10, 8)
+      ...> |> PriorityQueue.push(1, 4)
+      ...> |> PriorityQueue.push(2, 7)
+      ...> |> PriorityQueue.pairs()
+
+      [
+        {1, 1}, {1, 2}, {1, 3}, {1, 4},
+        {2, 5}, {2, 6}, {2, 7},
+        {10, 8},
+        {100, 9}
+      ]
+  """
   def pairs(pq = %__MODULE__{}) do
     pairs(pq, [])
   end
@@ -74,24 +178,17 @@ end
 ```
 
 ```elixir
-pq =
-  PriorityQueue.new()
-  |> PriorityQueue.push(100, 8)
-  |> PriorityQueue.push(1, 1)
-  |> PriorityQueue.push(2, 5)
-  |> PriorityQueue.push(1, "Philipp")
-  |> PriorityQueue.push(2, 6)
-  |> PriorityQueue.push(1, 3)
-  |> PriorityQueue.push(10, 7)
-  |> PriorityQueue.push(1, "Hallo")
-  |> PriorityQueue.push(2, "Papagei")
-
-# Show l contents
-{{:value, prio, item}, new_queue} = pq |> PriorityQueue.pop()
-
-new_queue |> PriorityQueue.pairs()
-
-pq |> PriorityQueue.pairs()
+PriorityQueue.new()
+|> PriorityQueue.push(100, 9)
+|> PriorityQueue.push(1, 1)
+|> PriorityQueue.push(2, 5)
+|> PriorityQueue.push(1, 2)
+|> PriorityQueue.push(2, 6)
+|> PriorityQueue.push(1, 3)
+|> PriorityQueue.push(10, 8)
+|> PriorityQueue.push(1, 4)
+|> PriorityQueue.push(2, 7)
+|> PriorityQueue.pairs()
 ```
 
 ### The `GenServer` wrapped around the `PriorityQueue` data structure
@@ -105,102 +202,34 @@ defmodule PriorityQueueServer do
   use GenServer
   require Logger
 
-  defstruct priority_queue: nil, requestors: nil
-
   # Client
-
-  def start_link(), do: GenServer.start_link(__MODULE__, %__MODULE__{})
+  def start_link(), do: GenServer.start_link(__MODULE__, PriorityQueue.new())
 
   def push(pid, priority, value), do: GenServer.cast(pid, {:push, priority, value})
 
-  # , :infinity
-  def pop(pid), do: GenServer.call(pid, :pop)
+  # :infinity,
+  def pop(pid, timeout \\ 5000), do: GenServer.call(pid, :pop, timeout)
+
+  def length(pid), do: GenServer.call(pid, :length)
 
   # Server
+  @impl true
+  def init(state = %PriorityQueue{}), do: {:ok, state}
 
   @impl true
-  def init(state = %__MODULE__{}), do: {:ok, state}
-
-  @impl true
-  def handle_cast(
-        {:push, priority, value},
-        state = %__MODULE__{priority_queue: priority_queue, requestors: requestors}
-      ) do
-    case {priority_queue, requestors} do
-      {nil, nil} ->
-        # A first message is pushed
-        priority_queue = PriorityQueue.new() |> PriorityQueue.push(priority, value)
-        {:noreply, %{state | priority_queue: priority_queue}}
-
-      {nil, requestors} ->
-        # A message arrives while people are waiting
-        case :queue.out(requestors) do
-          {{:value, requestor}, requestors} ->
-            GenServer.reply(requestor, {:value, priority, value})
-
-            requestors =
-              case requestors |> :queue.is_empty() do
-                true -> nil
-                _ -> requestors
-              end
-
-            state = %{state | requestors: requestors}
-            {:noreply, state}
-
-          {:empty, _} ->
-            priority_queue = PriorityQueue.new() |> PriorityQueue.push(priority, value)
-            state = %{state | priority_queue: priority_queue}
-            {:noreply, state}
-        end
-
-      {priority_queue, nil} ->
-        priority_queue = priority_queue |> PriorityQueue.push(priority, value)
-        state = %{state | priority_queue: priority_queue}
-        {:noreply, state}
-    end
+  def handle_cast({:push, priority, value}, priority_queue) do
+    {:noreply, priority_queue |> PriorityQueue.push(priority, value)}
   end
 
   @impl true
-  def handle_call(
-        :pop,
-        from,
-        state = %__MODULE__{priority_queue: priority_queue, requestors: requestors}
-      ) do
-    case {priority_queue, requestors} do
-      {nil, nil} ->
-        # Remember the caller for later
-        {:noreply, %{state | requestors: :queue.in(from, :queue.new())}}
+  def handle_call(:pop, _from, priority_queue = %PriorityQueue{}) do
+    {reply_value, priority_queue} = priority_queue |> PriorityQueue.pop()
+    {:reply, reply_value, priority_queue}
+  end
 
-      {nil, requestors} ->
-        # Remember the caller for later
-        {:noreply, %{state | requestors: :queue.in(from, requestors)}}
-
-      {priority_queue, requestors} ->
-        case PriorityQueue.empty?(priority_queue) do
-          true ->
-            requestors =
-              case requestors do
-                nil -> :queue.in(from, :queue.new())
-                requestors -> :queue.in(from, requestors)
-              end
-
-            state = %{state | requestors: requestors}
-            {:noreply, state}
-
-          false ->
-            case PriorityQueue.pop(priority_queue) do
-              {:none, _} ->
-                requestors = :queue.in(from, requestors)
-                state = %{state | requestors: requestors}
-                {:noreply, state}
-
-              {{:value, priority, value}, priority_queue} ->
-                reply_value = {:value, priority, value}
-                state = %{state | priority_queue: priority_queue}
-                {:reply, reply_value, state}
-            end
-        end
-    end
+  def handle_call(:length, _from, priority_queue = %PriorityQueue{}) do
+    reply_value = priority_queue |> PriorityQueue.size()
+    {:reply, reply_value, priority_queue}
   end
 end
 ```
@@ -212,58 +241,73 @@ defmodule MyTask do
   def launch(name) do
     {:ok, pid} = PriorityQueueServer.start_link()
     Process.register(pid, name)
-
-    name |> PriorityQueueServer.push(1, "Numba 1")
   end
 
-  defp loop(parent, pid) do
-    try do
-      {:value, priority, value} = pid |> PriorityQueueServer.pop()
-      send(parent, {:job, [priority: priority, value: value]})
-    catch
-      :exit, value ->
-        send(parent, {:timeout, value})
-    end
-
-    loop(parent, pid)
+  def send_data(name) do
+    name |> PriorityQueueServer.push(100, 9)
+    name |> PriorityQueueServer.push(1, 1)
+    name |> PriorityQueueServer.push(2, 5)
+    name |> PriorityQueueServer.push(1, 2)
+    name |> PriorityQueueServer.push(2, 6)
+    name |> PriorityQueueServer.push(1, 3)
+    name |> PriorityQueueServer.push(10, 8)
+    name |> PriorityQueueServer.push(1, 4)
+    name |> PriorityQueueServer.push(2, 7)
   end
 
-  def kick_it(pid),
-    do:
-      Task.async(fn ->
-        loop(self(), pid)
-      end)
+  def fetch_data(name) do
+    case name |> PriorityQueueServer.pop() do
+      :none ->
+        IO.puts("Queue #{name} is empty")
 
-  def receive() do
-    receive do
-      x -> x
-    after
-      0 -> :empty
+      {:value, prio, val} ->
+        IO.puts("Fetched #{val} with prio #{prio} from queue #{name}")
+        fetch_data(name)
     end
   end
+
+  defp pairs(pid, list) do
+    case pid |> PriorityQueueServer.pop() do
+      :none -> list |> :lists.reverse()
+      {:value, priority, value} -> pairs(pid, [{priority, value} | list])
+    end
+  end
+
+  def pairs(pid), do: pid |> pairs([])
 end
 ```
 
 ```elixir
 MyTask.launch(:fedex)
-%{pid: task} = MyTask.kick_it(:fedex)
-task
 ```
 
 ```elixir
-Process.alive?(task) |> inspect()
-MyTask.receive()
+# :fedex |> MyTask.send_data()
+
+:fedex |> PriorityQueueServer.push(100, 9)
+:fedex |> PriorityQueueServer.push(1, 1)
+:fedex |> PriorityQueueServer.push(2, 5)
+:fedex |> PriorityQueueServer.push(1, 2)
+:fedex |> PriorityQueueServer.push(2, 6)
+:fedex |> PriorityQueueServer.push(1, 3)
+:fedex |> PriorityQueueServer.push(10, 8)
+:fedex |> PriorityQueueServer.push(1, 4)
+:fedex |> PriorityQueueServer.push(2, 7)
+len = :fedex |> PriorityQueueServer.length()
+IO.puts("There are now #{len} items in the queue")
 ```
 
-## Launch the GenServer
+## Fetch data from the GenServer
 
 ```elixir
-{:ok, pid} = PriorityQueueServer.start_link()
+:fedex |> MyTask.pairs()
 ```
 
 ## Put some data into the GenServer
 
 ```elixir
+pid = :fedex
+
 [
   {1, "Top prio #{DateTime.utc_now()}"},
   {10, "Some batch crap  #{DateTime.utc_now()}"},

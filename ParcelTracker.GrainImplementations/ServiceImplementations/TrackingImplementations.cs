@@ -12,7 +12,7 @@ internal abstract class TrackingClientBase : ITrackingClient
 
     internal abstract string ProviderName { get; }
     internal abstract (int Low, int High) LatencyMilliSeconds { get; }
-
+    
     // Used to track how many concurrent requests are in flight (only works on single machine for debugging).
     // For proper cluster support, would need to implement a grain to store the number.
     internal abstract int StartOperation();

@@ -139,6 +139,24 @@ defmodule PriorityQueue do
         { 3, :very_low_prio }
       ]
 
+      iex> PriorityQueue.new()
+      ...> |> PriorityQueue.push(100, 9)
+      ...> |> PriorityQueue.push(1, 1)
+      ...> |> PriorityQueue.push(2, 5)
+      ...> |> PriorityQueue.push(1, 2)
+      ...> |> PriorityQueue.push(2, 6)
+      ...> |> PriorityQueue.push(1, 3)
+      ...> |> PriorityQueue.push(10, 8)
+      ...> |> PriorityQueue.push(1, 4)
+      ...> |> PriorityQueue.push(2, 7)
+      ...> |> PriorityQueue.pairs()
+
+      [
+        {1, 1}, {1, 2}, {1, 3}, {1, 4},
+        {2, 5}, {2, 6}, {2, 7},
+        {10, 8},
+        {100, 9}
+      ]
   """
   def pairs(pq = %__MODULE__{}) do
     pairs(pq, [])
