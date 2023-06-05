@@ -2,24 +2,26 @@
 
 ```elixir
 Mix.install([
-  {:treex, "~> 0.1.0"}
+  # {:treex, "~> 0.1.0"}
 ])
 ```
 
 ## The `PriorityQueue` data structure
 
-The `PriorityQueue` module represents the pure functional data structure. It uses the [`:treex`](https://hexdocs.pm/treex/api-reference.html) module to have a better UX interacting with Erlang's `gb_trees` data structure.
+```elixir
+make_ref()
+```
+
+The `PriorityQueue` module represents the pure functional data structure. It uses Erlang's `:gb_trees` and `:queue` data structures.
 
 ```elixir
 defmodule PriorityQueue do
-  defstruct size: 0, treex: nil
+  defstruct size: 0, tree: nil
 
-  def new, do: %__MODULE__{size: 0, treex: Treex.empty()}
+  def new, do: %__MODULE__{size: 0, tree: :gb_trees.empty()}
 
-  # def empty?(%__MODULE__{treex: tree}), do: tree |> Treex.empty?()
   def empty?(%__MODULE__{size: 0}), do: true
   def empty?(%__MODULE__{}), do: false
-  def empty?(_), do: false
 
   @doc ~S"""
   Returns the size of a `PriorityQueue
@@ -38,14 +40,24 @@ defmodule PriorityQueue do
   """
   def size(%__MODULE__{size: n}), do: n
 
-  def push(pq = %__MODULE__{size: n, treex: tree}, priority, value) when is_integer(priority) do
+  def push(pq = %__MODULE__{size: n, tree: tree}, priority, value) when is_integer(priority) do
     tree =
-      case tree |> Treex.lookup(priority) do
-        {:value, queue} -> tree |> Treex.update!(priority, :queue.in(value, queue))
-        :none -> tree |> Treex.insert!(priority, :queue.in(value, :queue.new()))
+      case :gb_trees.lookup(priority, tree) do
+        {:value, queue} -> :gb_trees.update(priority, :queue.in(value, queue), tree)
+        :none -> :gb_trees.insert(priority, :queue.in(value, :queue.new()), tree)
       end
 
-    %{pq | size: n + 1, treex: tree}
+    %{pq | size: n + 1, tree: tree}
+  end
+
+  def push_r(pq = %__MODULE__{size: n, tree: tree}, priority, value) when is_integer(priority) do
+    tree =
+      case :gb_trees.lookup(priority, tree) do
+        {:value, queue} -> :gb_trees.update(priority, :queue.in_r(value, queue), tree)
+        :none -> :gb_trees.insert(priority, :queue.in_r(value, :queue.new()), tree)
+      end
+
+    %{pq | size: n + 1, tree: tree}
   end
 
   @doc ~S"""
@@ -53,11 +65,12 @@ defmodule PriorityQueue do
 
   ## Examples
 
-      iex> queue = PriorityQueue.new()
-      ...>     |> PriorityQueue.push(2, "Lower prio")
-      ...>     |> PriorityQueue.push(1, "Higher prio")
-      ...>     |> PriorityQueue.push(3, :very_low_prio)
-      ...>     |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
+      iex> queue = 
+      ...>   PriorityQueue.new()
+      ...>   |> PriorityQueue.push(2, "Lower prio")
+      ...>   |> PriorityQueue.push(1, "Higher prio")
+      ...>   |> PriorityQueue.push(3, :very_low_prio)
+      ...>   |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
       iex> { result, queue } = queue |> PriorityQueue.pop(); result
       { :value, 1, "Higher prio" }
       iex> { result, queue } = queue |> PriorityQueue.pop(); result
@@ -74,17 +87,17 @@ defmodule PriorityQueue do
   """
   def pop(pq = %__MODULE__{size: 0}), do: {:none, pq}
 
-  def pop(%__MODULE__{size: n, treex: tree}) do
-    {priority, queue, tree} = tree |> Treex.take_smallest!()
+  def pop(%__MODULE__{size: n, tree: tree}) do
+    {priority, queue, tree} = :gb_trees.take_smallest(tree)
     {{:value, value}, queue} = :queue.out(queue)
 
     tree =
       case :queue.is_empty(queue) do
-        false -> tree |> Treex.enter(priority, queue)
+        false -> :gb_trees.enter(priority, queue, tree)
         true -> tree
       end
 
-    {{:value, priority, value}, %__MODULE__{size: n - 1, treex: tree}}
+    {{:value, priority, value}, %__MODULE__{size: n - 1, tree: tree}}
   end
 
   @doc ~S"""
@@ -100,7 +113,7 @@ defmodule PriorityQueue do
       [ 1, 2 ]
 
   """
-  def keys(%__MODULE__{treex: tree}), do: tree |> Treex.keys()
+  def keys(%__MODULE__{tree: tree}), do: :gb_trees.keys(tree)
 
   defp values(pq = %__MODULE__{}, list) do
     case pq |> pop() do
@@ -210,8 +223,6 @@ defmodule PriorityQueueServer do
   # :infinity,
   def pop(pid, timeout \\ 5000), do: GenServer.call(pid, :pop, timeout)
 
-  def length(pid), do: GenServer.call(pid, :length)
-
   # Server
   @impl true
   def init(state = %PriorityQueue{}), do: {:ok, state}
@@ -226,10 +237,87 @@ defmodule PriorityQueueServer do
     {reply_value, priority_queue} = priority_queue |> PriorityQueue.pop()
     {:reply, reply_value, priority_queue}
   end
+end
+```
 
-  def handle_call(:length, _from, priority_queue = %PriorityQueue{}) do
+```elixir
+defmodule PriorityQueueServerWithConfirmation do
+  use GenServer
+  require Logger
+
+  defstruct pq: nil, in_flight: nil
+
+  # Client
+  def start_link(),
+    do: GenServer.start_link(__MODULE__, %__MODULE__{pq: PriorityQueue.new(), in_flight: %{}})
+
+  def push(pid, priority, value), do: GenServer.cast(pid, {:push, priority, value})
+
+  # :infinity,
+  def pop(pid, timeout \\ 5000), do: GenServer.call(pid, {:pop, timeout})
+
+  def finished(pid, ref), do: GenServer.call(pid, {:finished, ref})
+
+  def length(pid), do: GenServer.call(pid, :length)
+
+  # Server
+  @impl true
+  def init(state = %__MODULE__{}), do: {:ok, state}
+
+  @impl true
+  def handle_cast({:push, priority, value}, state = %__MODULE__{pq: pq}) do
+    state = %{state | pq: PriorityQueue.push(pq, priority, value)}
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:pop, timeout}, _from, state = %__MODULE__{pq: pq, in_flight: in_flight}) do
+    {item, new_pq} = pq |> PriorityQueue.pop()
+
+    case item do
+      :none ->
+        {:reply, :none, state}
+
+      {:value, priority, value} ->
+        ref = make_ref()
+        in_flight = in_flight |> Map.put(ref, {priority, value})
+        state = %{state | pq: new_pq, in_flight: in_flight}
+
+        # After the timeout, check whether the item has been processed
+        Process.send_after(self(), {:reschedule, ref}, timeout)
+
+        {:reply, {:value, priority, value, ref}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:finished, ref}, _from, state = %__MODULE__{in_flight: in_flight}) do
+    case in_flight |> Map.pop(ref) do
+      {nil, _} ->
+        {:reply, :not_found, state}
+
+      {{_priority, _value}, in_flight} ->
+        {:reply, :ok, %{state | in_flight: in_flight}}
+    end
+  end
+
+  def handle_call(:length, _from, state = %__MODULE__{pq: priority_queue}) do
     reply_value = priority_queue |> PriorityQueue.size()
-    {:reply, reply_value, priority_queue}
+    {:reply, reply_value, state}
+  end
+
+  @impl true
+  def handle_info({:reschedule, ref}, state = %__MODULE__{pq: pq, in_flight: in_flight}) do
+    case in_flight |> Map.pop(ref) do
+      {nil, _} ->
+        # If the reference isn't there any longer...
+        {:noreply, state}
+
+      {{priority, value}, in_flight} ->
+        # The reference hasn't been handled in due time, so we re-enqueue it.
+        state = %{state | pq: PriorityQueue.push_r(pq, priority, value), in_flight: in_flight}
+        {:noreply, state}
+    end
   end
 end
 ```
@@ -239,37 +327,42 @@ defmodule MyTask do
   require Logger
 
   def launch(name) do
-    {:ok, pid} = PriorityQueueServer.start_link()
+    {:ok, pid} = PriorityQueueServerWithConfirmation.start_link()
     Process.register(pid, name)
   end
 
   def send_data(name) do
-    name |> PriorityQueueServer.push(100, 9)
-    name |> PriorityQueueServer.push(1, 1)
-    name |> PriorityQueueServer.push(2, 5)
-    name |> PriorityQueueServer.push(1, 2)
-    name |> PriorityQueueServer.push(2, 6)
-    name |> PriorityQueueServer.push(1, 3)
-    name |> PriorityQueueServer.push(10, 8)
-    name |> PriorityQueueServer.push(1, 4)
-    name |> PriorityQueueServer.push(2, 7)
+    name |> PriorityQueueServerWithConfirmation.push(100, 9)
+    name |> PriorityQueueServerWithConfirmation.push(1, 1)
+    name |> PriorityQueueServerWithConfirmation.push(2, 5)
+    name |> PriorityQueueServerWithConfirmation.push(1, 2)
+    name |> PriorityQueueServerWithConfirmation.push(2, 6)
+    name |> PriorityQueueServerWithConfirmation.push(1, 3)
+    name |> PriorityQueueServerWithConfirmation.push(10, 8)
+    name |> PriorityQueueServerWithConfirmation.push(1, 4)
+    name |> PriorityQueueServerWithConfirmation.push(2, 7)
   end
 
   def fetch_data(name) do
-    case name |> PriorityQueueServer.pop() do
+    case name |> PriorityQueueServerWithConfirmation.pop() do
       :none ->
         IO.puts("Queue #{name} is empty")
 
-      {:value, prio, val} ->
+      {:value, prio, val, ref} ->
         IO.puts("Fetched #{val} with prio #{prio} from queue #{name}")
+        PriorityQueueServerWithConfirmation.finished(name, ref)
         fetch_data(name)
     end
   end
 
   defp pairs(pid, list) do
-    case pid |> PriorityQueueServer.pop() do
-      :none -> list |> :lists.reverse()
-      {:value, priority, value} -> pairs(pid, [{priority, value} | list])
+    case pid |> PriorityQueueServerWithConfirmation.pop() do
+      :none ->
+        list |> :lists.reverse()
+
+      {:value, priority, value, ref} ->
+        PriorityQueueServerWithConfirmation.finished(pid, ref)
+        pairs(pid, [{priority, value} | list])
     end
   end
 
@@ -278,7 +371,45 @@ end
 ```
 
 ```elixir
-MyTask.launch(:fedex)
+name = :f
+```
+
+```elixir
+MyTask.launch(name)
+```
+
+```elixir
+name |> PriorityQueueServerWithConfirmation.push(100, 9)
+name |> PriorityQueueServerWithConfirmation.push(1, 1)
+```
+
+```elixir
+PriorityQueueServerWithConfirmation.pop(name)
+```
+
+```elixir
+:sys.get_state(name)
+```
+
+```elixir
+MyTask.pairs(name)
+```
+
+```elixir
+case PriorityQueueServer.pop(name) do
+  {:value, priority, value, ref} ->
+    IO.puts("Received #{inspect(value)} with prio #{priority} (handle: #{inspect(ref)})")
+    IO.puts("Before: #{inspect(:sys.get_state(name))}")
+    PriorityQueueServer.finished(name, ref)
+    IO.puts("After: #{inspect(:sys.get_state(name))}")
+
+  :none ->
+    :none
+end
+```
+
+```elixir
+:sys.get_state(:f)
 ```
 
 ```elixir

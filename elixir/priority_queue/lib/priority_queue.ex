@@ -1,12 +1,10 @@
 defmodule PriorityQueue do
-  defstruct size: 0, treex: nil
+  defstruct size: 0, tree: nil
 
-  def new, do: %__MODULE__{size: 0, treex: Treex.empty()}
+  def new, do: %__MODULE__{size: 0, tree: :gb_trees.empty()}
 
-  # def empty?(%__MODULE__{treex: tree}), do: tree |> Treex.empty?()
   def empty?(%__MODULE__{size: 0}), do: true
   def empty?(%__MODULE__{}), do: false
-  def empty?(_), do: false
 
   @doc ~S"""
   Returns the size of a `PriorityQueue
@@ -25,14 +23,14 @@ defmodule PriorityQueue do
   """
   def size(%__MODULE__{size: n}), do: n
 
-  def push(pq = %__MODULE__{size: n, treex: tree}, priority, value) when is_integer(priority) do
+  def push(pq = %__MODULE__{size: n, tree: tree}, priority, value) when is_integer(priority) do
     tree =
-      case tree |> Treex.lookup(priority) do
-        {:value, queue} -> tree |> Treex.update!(priority, :queue.in(value, queue))
-        :none -> tree |> Treex.insert!(priority, :queue.in(value, :queue.new()))
+      case :gb_trees.lookup(priority, tree) do
+        {:value, queue} -> :gb_trees.update(priority, :queue.in(value, queue), tree)
+        :none -> :gb_trees.insert(priority, :queue.in(value, :queue.new()), tree)
       end
 
-    %{pq | size: n + 1, treex: tree}
+    %{pq | size: n + 1, tree: tree}
   end
 
   @doc ~S"""
@@ -61,17 +59,17 @@ defmodule PriorityQueue do
   """
   def pop(pq = %__MODULE__{size: 0}), do: {:none, pq}
 
-  def pop(%__MODULE__{size: n, treex: tree}) do
-    {priority, queue, tree} = tree |> Treex.take_smallest!()
+  def pop(%__MODULE__{size: n, tree: tree}) do
+    {priority, queue, tree} = :gb_trees.take_smallest(tree)
     {{:value, value}, queue} = :queue.out(queue)
 
     tree =
       case :queue.is_empty(queue) do
-        false -> tree |> Treex.enter(priority, queue)
+        false -> :gb_trees.enter(priority, queue, tree)
         true -> tree
       end
 
-    {{:value, priority, value}, %__MODULE__{size: n - 1, treex: tree}}
+    {{:value, priority, value}, %__MODULE__{size: n - 1, tree: tree}}
   end
 
   @doc ~S"""
@@ -87,7 +85,7 @@ defmodule PriorityQueue do
       [ 1, 2 ]
 
   """
-  def keys(%__MODULE__{treex: tree}), do: tree |> Treex.keys()
+  def keys(%__MODULE__{tree: tree}), do: :gb_trees.keys(tree)
 
   defp values(pq = %__MODULE__{}, list) do
     case pq |> pop() do
