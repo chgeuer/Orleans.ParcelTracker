@@ -23,26 +23,68 @@ defmodule PriorityQueue do
   """
   def size(%__MODULE__{size: n}), do: n
 
-  def push(pq = %__MODULE__{size: n, tree: tree}, priority, value) when is_integer(priority) do
+  defp push_into_queue(pq = %__MODULE__{size: n, tree: tree}, priority, value, operation)
+       when is_integer(priority) do
     tree =
       case :gb_trees.lookup(priority, tree) do
-        {:value, queue} -> :gb_trees.update(priority, :queue.in(value, queue), tree)
-        :none -> :gb_trees.insert(priority, :queue.in(value, :queue.new()), tree)
+        {:value, queue} ->
+          queue =
+            case operation do
+              :regular -> :queue.in(value, queue)
+              :requeue -> :queue.in_r(value, queue)
+            end
+
+          :gb_trees.update(priority, queue, tree)
+
+        :none ->
+          :gb_trees.insert(priority, :queue.in(value, :queue.new()), tree)
       end
 
     %{pq | size: n + 1, tree: tree}
   end
 
   @doc ~S"""
-  Returns the pairs of a `PriorityQueue
+  Appends values into a `PriorityQueue`.
 
   ## Examples
 
-      iex> queue = PriorityQueue.new()
-      ...>     |> PriorityQueue.push(2, "Lower prio")
-      ...>     |> PriorityQueue.push(1, "Higher prio")
-      ...>     |> PriorityQueue.push(3, :very_low_prio)
-      ...>     |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
+      iex> queue =
+      ...>   PriorityQueue.new()
+      ...>   |> PriorityQueue.push(2, 3) # [{2, 3}]
+      ...>   |> PriorityQueue.push(1, 1) # [{1, 1}, {2, 3}]
+      ...>   |> PriorityQueue.push(3, 5) # [{1, 1}, {2, 3}, {3, 5}]
+      ...>   |> PriorityQueue.push_r(2, 2) # [{1, 1}, {2, 2}, {2, 3}, {3, 5}]
+      ...>   |> PriorityQueue.push(2, 4) # [{1, 1}, {2, 2}, {2, 3}, {2, 4}, {3, 5}]
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 1, 1 }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, 2 }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, 3 }
+      iex> { result, queue } = queue |> PriorityQueue.pop(); result
+      { :value, 2, 4 }
+      iex> { result, _queue } = queue |> PriorityQueue.pop(); result
+      { :value, 3, 5 }
+  """
+  def push(pq = %__MODULE__{}, priority, value) when is_integer(priority) do
+    push_into_queue(pq, priority, value, :regular)
+  end
+
+  def push_r(pq = %__MODULE__{}, priority, value) when is_integer(priority) do
+    push_into_queue(pq, priority, value, :requeue)
+  end
+
+  @doc ~S"""
+  Returns the pairs of a `PriorityQueue`.
+
+  ## Examples
+
+      iex> queue =
+      ...>   PriorityQueue.new()
+      ...>   |> PriorityQueue.push(2, "Lower prio")
+      ...>   |> PriorityQueue.push(1, "Higher prio")
+      ...>   |> PriorityQueue.push(3, :very_low_prio)
+      ...>   |> PriorityQueue.push(2, { :job, "Some other thing in 2" })
       iex> { result, queue } = queue |> PriorityQueue.pop(); result
       { :value, 1, "Higher prio" }
       iex> { result, queue } = queue |> PriorityQueue.pop(); result
@@ -89,7 +131,7 @@ defmodule PriorityQueue do
 
   defp values(pq = %__MODULE__{}, list) do
     case pq |> pop() do
-      {:none, _} -> list |> :lists.reverse()
+      {:none, _} -> :lists.reverse(list)
       {{:value, _priority, value}, pq} -> values(pq, [value | list])
     end
   end
@@ -113,7 +155,7 @@ defmodule PriorityQueue do
 
   defp pairs(pq = %__MODULE__{}, list) do
     case pq |> pop() do
-      {:none, _} -> list |> :lists.reverse()
+      {:none, _} -> :lists.reverse(list)
       {{:value, priority, value}, pq} -> pairs(pq, [{priority, value} | list])
     end
   end

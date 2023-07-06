@@ -16,12 +16,12 @@ defmodule PriorityQueueServer do
 
   @impl true
   def handle_cast({:push, priority, value}, priority_queue) do
-    {:noreply, priority_queue |> PriorityQueue.push(priority, value)}
+    {:noreply, PriorityQueue.push(priority_queue, priority, value)}
   end
 
   @impl true
   def handle_call(:pop, _from, priority_queue = %PriorityQueue{}) do
-    {reply_value, priority_queue} = priority_queue |> PriorityQueue.pop()
+    {reply_value, priority_queue} = PriorityQueue.pop(priority_queue)
     {:reply, reply_value, priority_queue}
   end
 end

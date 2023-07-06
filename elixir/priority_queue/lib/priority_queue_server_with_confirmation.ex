@@ -6,7 +6,7 @@ defmodule PriorityQueueServerWithConfirmation do
 
   # Client
   def start_link(),
-    do: GenServer.start_link(__MODULE__, %__MODULE__{pq: PriorityQueue.new(), in_flight: %{}})
+    do: GenServer.start_link(__MODULE__, %__MODULE__{pq: PriorityQueue.new(), in_flight: Map.new()})
 
   def push(pid, priority, value), do: GenServer.cast(pid, {:push, priority, value})
 
@@ -29,7 +29,7 @@ defmodule PriorityQueueServerWithConfirmation do
 
   @impl true
   def handle_call({:pop, timeout}, _from, state = %__MODULE__{pq: pq, in_flight: in_flight}) do
-    {item, new_pq} = pq |> PriorityQueue.pop()
+    {item, new_pq} = PriorityQueue.pop(pq)
 
     case item do
       :none ->
@@ -37,10 +37,10 @@ defmodule PriorityQueueServerWithConfirmation do
 
       {:value, priority, value} ->
         ref = make_ref()
-        in_flight = in_flight |> Map.put(ref, {priority, value})
+        in_flight = Map.put(in_flight, ref, {priority, value})
         state = %{state | pq: new_pq, in_flight: in_flight}
 
-        # After the timeout, check whether the item has been processed
+        # Schedule an event to check whether the item has been processed, and re-inject if needed
         Process.send_after(self(), {:reschedule, ref}, timeout)
 
         {:reply, {:value, priority, value, ref}, state}
@@ -49,7 +49,7 @@ defmodule PriorityQueueServerWithConfirmation do
 
   @impl true
   def handle_call({:finished, ref}, _from, state = %__MODULE__{in_flight: in_flight}) do
-    case in_flight |> Map.pop(ref) do
+    case Map.pop(in_flight, ref) do
       {nil, _} ->
         {:reply, :not_found, state}
 
@@ -58,14 +58,16 @@ defmodule PriorityQueueServerWithConfirmation do
     end
   end
 
-  def handle_call(:length, _from, state = %__MODULE__{pq: priority_queue}) do
-    reply_value = priority_queue |> PriorityQueue.size()
-    {:reply, reply_value, state}
+  def handle_call(:length, _from, state = %__MODULE__{pq: pq}) do
+    {:reply, PriorityQueue.size(pq), state}
   end
 
   @impl true
   def handle_info({:reschedule, ref}, state = %__MODULE__{pq: pq, in_flight: in_flight}) do
-    case in_flight |> Map.pop(ref) do
+    #
+    # After a given time, check whether the queue item with the given reference is still in-flight, and re-enqueue.
+    #
+    case Map.pop(in_flight, ref) do
       {nil, _} ->
         # If the reference isn't there any longer...
         {:noreply, state}
